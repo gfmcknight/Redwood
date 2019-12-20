@@ -18,10 +18,17 @@ namespace Redwood.Runtime
 
         internal Frame(GlobalContext context, InternalLambda lambda)
         {
-            this.global = context;
-            this.closures = lambda.closures;
-            this.stack = new object[lambda.description.stackSize];
-            this.instructions = lambda.description.instructions;
+            global = context;
+            closures = new Closure[lambda.closures.Length + 1];
+            int i;
+            for (i = 0; i < lambda.closures.Length; i++)
+            {
+                closures[i] = lambda.closures[i];
+            }
+            closures[i] = new Closure(this, lambda.description.closureSize);
+                
+            stack = new object[lambda.description.stackSize];
+            instructions = lambda.description.instructions;
         }
     }
 }

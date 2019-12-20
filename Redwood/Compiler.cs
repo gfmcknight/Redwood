@@ -10,10 +10,10 @@ namespace Redwood
 {
     internal class Binder
     {
-        int scopeDepth;
-        List<int> maxStack;
-        List<int> stackPosition;
-        List<int> closurePosition;
+        private int scopeDepth;
+        private List<int> maxStack;
+        private List<int> stackPosition;
+        private List<int> closurePosition;
 
         internal Binder()
         {
@@ -63,6 +63,11 @@ namespace Redwood
             return stackSize;
         }
 
+        internal int GetClosureSize()
+        {
+            return closurePosition[closurePosition.Count - 1];
+        }
+
         // A way of tracking the fact that some variables will
         // have a lifetime is needed, such as when inside of an
         // if statement and the variables can be reset
@@ -78,7 +83,6 @@ namespace Redwood
             int stackSize = maxStack[scopeDepth];
             maxStack.RemoveAt(scopeDepth);
             stackPosition.RemoveAt(scopeDepth);
-            closurePosition.RemoveAt(scopeDepth);
             scopeDepth -= 1;
             maxStack[scopeDepth] = Math.Max(stackSize, maxStack[scopeDepth]);
         }

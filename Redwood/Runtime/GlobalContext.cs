@@ -8,7 +8,12 @@ namespace Redwood.Runtime
     {
         internal object LookupVariable(string name)
         {
-            return null;
+            throw new NotImplementedException();
+        }
+
+        internal void AssignVariable(string name, object result)
+        {
+            throw new NotImplementedException();
         }
     }
 }

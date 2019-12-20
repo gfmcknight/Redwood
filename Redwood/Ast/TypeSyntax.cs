@@ -37,7 +37,7 @@ namespace Redwood.Ast
             {
                 return type;
             }
-            return TypeName.Variable.KnownType;
+            return TypeName.GetKnownType();
         }
     }
 }

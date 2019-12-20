@@ -14,7 +14,7 @@ namespace Redwood.Instructions
         }
         public int Execute(Frame frame)
         {
-            frame.result = frame.stack[index];
+            frame.stack[index] = frame.result;
             return 1;
         }
     }
@@ -32,7 +32,7 @@ namespace Redwood.Instructions
 
         public int Execute(Frame frame)
         {
-            frame.result = frame.closures[closureId].data[index];
+            frame.closures[closureId].data[index] = frame.result;
             return 1;
         }
     }
@@ -48,7 +48,7 @@ namespace Redwood.Instructions
 
         public int Execute(Frame frame)
         {
-            frame.result = frame.global.LookupVariable(name);
+            frame.global.AssignVariable(name, frame.result);
             return 1;
         }
     }

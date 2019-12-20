@@ -8,5 +8,10 @@ namespace Redwood.Runtime
     {
         internal WeakReference<Frame> frame;
         internal object[] data;
+        internal Closure(Frame frame, int size)
+        {
+            this.frame = new WeakReference<Frame>(frame);
+            data = new object[size];
+        }
     }
 }

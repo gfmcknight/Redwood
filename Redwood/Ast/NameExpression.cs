@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Redwood.Instructions;
+using Redwood.Runtime;
 
 namespace Redwood.Ast
 {
@@ -28,6 +29,11 @@ namespace Redwood.Ast
         internal override IEnumerable<NameExpression> Walk()
         {
             return new NameExpression[] { this };
+        }
+
+        public override RedwoodType GetKnownType()
+        {
+            return Variable?.KnownType;
         }
     }
 }

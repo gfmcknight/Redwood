@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Redwood.Instructions;
 using Redwood.Runtime;
 
@@ -16,7 +17,19 @@ namespace Redwood.Ast
 
         internal override void Bind(Binder binder)
         {
-            throw new NotImplementedException();
+            // We have a series of temporary variables, so we will need
+            // to discard them after the call is made
+            binder.Bookmark();
+            // TODO: definitions in arguments? This shouldn't occur..
+            foreach (Expression argument in Arguments)
+            {
+                argument.Bind(binder);
+            }
+            foreach (Variable argumentVariable in ArgumentVariables)
+            {
+                binder.BindVariable(argumentVariable);
+            }
+            binder.Checkout();
         }
 
         internal override IEnumerable<Instruction> Compile()
@@ -89,6 +102,7 @@ namespace Redwood.Ast
 
         internal override IEnumerable<NameExpression> Walk()
         {
+            ArgumentVariables = new List<Variable>();
             for (int i = 0; i < Arguments.Length; i++)
             {
                 ArgumentVariables.Add(new Variable

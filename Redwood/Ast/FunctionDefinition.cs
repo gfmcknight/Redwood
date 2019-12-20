@@ -16,9 +16,11 @@ namespace Redwood.Ast
         public TypeSyntax ReturnType { get; set; }
 
         internal int stackSize;
+        internal int closureSize;
 
         internal override void Bind(Binder binder)
         {
+            DeclaredVariable.KnownType = RedwoodType.GetForCSharpType(typeof(InternalLambda));
             base.Bind(binder);
             binder.EnterFullScope();
             foreach (ParameterDefinition param in Parameters)
@@ -26,12 +28,23 @@ namespace Redwood.Ast
                 param.Bind(binder);
             }
             Body.Bind(binder);
+            closureSize = binder.GetClosureSize();
             stackSize = binder.LeaveFullScope();
         }
 
         internal override IEnumerable<Instruction> Compile()
         {
-            throw new NotImplementedException();
+            if (ClassMethod)
+            {
+                throw new NotImplementedException("Methods in classes");
+            }
+
+            return new Instruction[]
+            {
+                new BuildLambdaInstruction(CompileInner()),
+                Compiler.CompileVariableAssign(DeclaredVariable)
+            };
+
         }
 
         internal override IEnumerable<NameExpression> Walk()
@@ -47,7 +60,15 @@ namespace Redwood.Ast
             }
 
             freeVars.AddRange(Body.Walk());
+
             Compiler.MatchVariables(freeVars, parameterVars);
+            // Anything that escapes from the function definition
+            // will need to be closured because it comes from an actual
+            // outer function scope
+            foreach (NameExpression ne in freeVars)
+            {
+                ne.RequiresClosure = true;
+            }
             return freeVars;
         }
 
@@ -65,6 +86,7 @@ namespace Redwood.Ast
                 returnType = ReturnType.GetIndicatedType(), // TODO!
                 instructions = Body.Compile().ToArray(),
                 stackSize = stackSize,
+                closureSize = closureSize,
                 ownerSlot = DeclaredVariable.Location // TODO: is this right?
             };
         }

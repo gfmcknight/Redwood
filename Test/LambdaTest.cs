@@ -28,7 +28,8 @@ namespace Test
                     Parameters = new ParameterDefinition[] { },
                     Body = new BlockStatement
                     {
-                        Statements = new Statement[] {
+                        Statements = new Statement[]
+                        {
                             new ReturnStatement
                             {
                                 Expression = new StringConstant { Value = "Test" }
@@ -70,7 +71,8 @@ namespace Test
                     },
                     Body = new BlockStatement
                     {
-                        Statements = new Statement[] {
+                        Statements = new Statement[]
+                        {
                             new ReturnStatement
                             {
                                 Expression = new NameExpression { Name = "paramA" }
@@ -82,6 +84,76 @@ namespace Test
 
             Assert.Equal("TestABC", lambda.Run("TestABC"));
             Assert.Equal("Test123", lambda.Run("Test123"));
+        }
+
+        [Fact]
+        public void CanCallAnotherFunction()
+        {
+            FunctionDefinition innerFunction = new FunctionDefinition
+            {
+                ClassMethod = false,
+                Name = "innerTestFunc",
+                ReturnType = new TypeSyntax
+                {
+                    TypeName = new NameExpression
+                    {
+                        Name = "string"
+                    }
+                },
+                Parameters = new ParameterDefinition[]
+                {
+                    new ParameterDefinition
+                    {
+                        Type = new TypeSyntax
+                        {
+                            TypeName = new NameExpression { Name = "string" },
+                        },
+                        Name = "paramA"
+                    }
+                },
+                Body = new BlockStatement
+                {
+                    Statements = new Statement[]
+                    {
+                        new ReturnStatement
+                        {
+                            Expression = new NameExpression { Name = "paramA" }
+                        }
+                    }
+                }
+            };
+
+            Lambda lambda = Compiler.CompileFunction(
+                new FunctionDefinition
+                {
+                    ClassMethod = false,
+                    Name = "testFunc",
+                    ReturnType = new TypeSyntax
+                    {
+                        TypeName = new NameExpression
+                        {
+                            Name = "string"
+                        }
+                    },
+                    Parameters = new ParameterDefinition[] { },
+                    Body = new BlockStatement
+                    {
+                        Statements = new Statement[] {
+                            innerFunction,
+                            new ReturnStatement
+                            {
+                                Expression = new CallExpression
+                                {
+                                    FunctionName = new NameExpression { Name = "innerTestFunc" },
+                                    Arguments = new Expression[] { new StringConstant { Value = "Test" } }
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+
+            Assert.Equal("Test", lambda.Run());
         }
     }
 }

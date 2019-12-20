@@ -43,7 +43,7 @@ namespace Redwood.Instructions
             {
                 args[i] = frame.stack[argLocations[i]];
             }
-            lambda.Run(args);
+            frame.result = lambda.Run(args);
             return 1;
         }
     }
@@ -100,7 +100,7 @@ namespace Redwood.Instructions
             {
                 args[i] = frame.stack[argLocations[i]];
             }
-            lambda.Run(args);
+            frame.result = lambda.Run(args);
             return 1;
         }
     }

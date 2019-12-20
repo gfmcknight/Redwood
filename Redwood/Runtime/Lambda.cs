@@ -17,6 +17,7 @@ namespace Redwood.Runtime
     internal class InternalLambdaDescription
     {
         internal int stackSize;
+        internal int closureSize;
         internal Instruction[] instructions;
         internal RedwoodType[] argTypes;
         internal RedwoodType returnType;
