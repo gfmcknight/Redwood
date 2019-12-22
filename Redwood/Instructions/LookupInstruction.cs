@@ -1,4 +1,5 @@
-﻿using Redwood.Runtime;
+﻿using Redwood.Ast;
+using Redwood.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -95,7 +96,7 @@ namespace Redwood.Instructions
                 }
                 else
                 {
-                    // TODO: Throw
+                    throw new NotImplementedException();
                 }
             }
             return 1;
@@ -127,9 +128,48 @@ namespace Redwood.Instructions
                 }
                 else
                 {
-                    // TODO: Throw
+                    throw new NotImplementedException();
                 }
             }
+            return 1;
+        }
+    }
+
+    internal class LookupExternalMemberBinaryOperationInstruction : Instruction
+    {
+        private BinaryOperator op;
+        private int leftIndex;
+        private int rightIndex;
+        private RedwoodType leftKnownType;
+        private RedwoodType rightKnownType;
+
+        public LookupExternalMemberBinaryOperationInstruction(
+            BinaryOperator op,
+            int leftIndex,
+            int rightIndex,
+            RedwoodType leftKnownType,
+            RedwoodType rightKnownType)
+        {
+            this.op = op;
+            this.leftIndex = leftIndex;
+            this.rightIndex = rightIndex;
+            this.leftKnownType = leftKnownType;
+            this.rightKnownType = rightKnownType;
+        }
+        public int Execute(Frame frame)
+        {
+            Lambda lambda;
+            if (!MemberResolver.TryResolveOperator(
+                frame.stack[leftIndex],
+                frame.stack[rightIndex],
+                leftKnownType,
+                rightKnownType,
+                op,
+                out lambda))
+            {
+                throw new NotImplementedException();
+            }
+            frame.result = lambda;
             return 1;
         }
     }

@@ -8,8 +8,7 @@ namespace Redwood.Ast
 {
     public abstract class Expression : Statement
     {
-        public virtual bool Constant { get; } = false;
-        public virtual bool Anf { get; } = false;
+        public bool Constant { get; } = false;
 
         public virtual RedwoodType GetKnownType()
         {

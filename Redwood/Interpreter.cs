@@ -51,9 +51,11 @@ namespace Redwood
                         // Assume that the instruction correctly outputs a
                         // frame into the result; we will overwrite it on
                         // return
-                        frames.Push(currentFrame.result as Frame);
+                        frames.Push(currentFrame);
                         currentFrame.returnAddress = i;
                         currentFrame.shouldCall = false;
+                        i = 0;
+                        currentFrame = currentFrame.result as Frame;
                     }
                 }
             }

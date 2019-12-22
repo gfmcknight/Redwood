@@ -65,14 +65,83 @@ namespace Redwood.Runtime
         {
             boundTarget = target;
             this.info = info;
+            ReturnType = RedwoodType.GetForCSharpType(info.ReturnType);
+            ParameterInfo[] parameters = info.GetParameters();
+            RedwoodType[] expectedArgs = new RedwoodType[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                expectedArgs[i] = RedwoodType.GetForCSharpType(parameters[i].ParameterType);
+            }
+            ExpectedArgs = expectedArgs;
         }
 
-        public IEnumerable<RedwoodType> ExpectedArgs => throw new NotImplementedException();
-        public RedwoodType ReturnType => throw new NotImplementedException();
+        public IEnumerable<RedwoodType> ExpectedArgs { get; private set; }
+        public RedwoodType ReturnType { get; private set; }
 
         public object Run(params object[] args)
         {
-            throw new NotImplementedException();
+            IEnumerator<RedwoodType> argsEnumerator = ExpectedArgs.GetEnumerator();
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (!argsEnumerator.MoveNext())
+                {
+                    throw new ArgumentException("Too few arguments");
+                }
+                if (!argsEnumerator.Current.IsAssignableFrom(args[i]))
+                {
+                    throw new ArgumentException("Invalid argument type " + args[i].ToString());
+                }
+            }
+
+            return info.Invoke(boundTarget, args);
+        }
+    }
+
+    internal delegate object InPlaceLambdaExecutor(object[] stack, int[] argLocations);
+
+    internal class InPlaceLambda : Lambda
+    {
+        private RedwoodType[] argumentTypes;
+        private InPlaceLambdaExecutor executor;
+
+        public IEnumerable<RedwoodType> ExpectedArgs { get { return argumentTypes; } }
+        public RedwoodType ReturnType { get; private set; }
+
+        internal InPlaceLambda(
+            RedwoodType[] argumentTypes,
+            RedwoodType returnType,
+            InPlaceLambdaExecutor executor)
+        {
+            this.argumentTypes = argumentTypes;
+            ReturnType = returnType;
+            this.executor = executor;
+        }
+
+        public object Run(params object[] args)
+        {
+            if (args.Length < argumentTypes.Length)
+            {
+                throw new ArgumentException("Too few arguments");
+            }
+            // TODO: Check incoming argument types
+            int[] argLocations = new int[argumentTypes.Length];
+            for (int i = 0; i < argLocations.Length; i++)
+            {
+                argLocations[i] = i;
+
+                if (!argumentTypes[i].IsAssignableFrom(args[i]))
+                {
+                    throw new ArgumentException("Invalid argument type " + args[i].ToString());
+                }
+            }
+
+            return executor(args, argLocations);
+        }
+
+        internal void RunInPlace(Frame frame, int[] argLocations)
+        {
+            // Assume argLocations matches argumentTypes
+            frame.result = executor(frame.stack, argLocations);
         }
     }
 

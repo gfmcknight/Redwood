@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Redwood.Ast
 {
-    class ImportStatement : Definition
+    class ImportDefinition : Definition
     {
         internal override void Bind(Binder binder)
         {

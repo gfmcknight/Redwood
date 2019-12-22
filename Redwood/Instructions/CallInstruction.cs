@@ -27,6 +27,23 @@ namespace Redwood.Instructions
         }
     }
 
+    internal class InPlaceCallInstruction : Instruction
+    {
+        private int[] argLocations;
+
+        public InPlaceCallInstruction(int[] argLocations)
+        {
+            this.argLocations = argLocations;
+        }
+
+        public int Execute(Frame frame)
+        {
+            InPlaceLambda lambda = frame.result as InPlaceLambda;
+            lambda.RunInPlace(frame, argLocations);
+            return 1;
+        }
+    }
+
     internal class ExternalCallInstruction : Instruction
     {
         private int[] argLocations;
@@ -80,7 +97,7 @@ namespace Redwood.Instructions
             {
                 if (!RuntimeUtil.TryConvertToLambda(frame.result, out lambda))
                 {
-                    // TODO: Throw!
+                    throw new NotImplementedException();
                 }
             }
             else
@@ -91,7 +108,7 @@ namespace Redwood.Instructions
                     functionName,
                     out lambda))
                 {
-                    // TODO: Throw!
+                    throw new NotImplementedException();
                 }
             }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Redwood.Ast;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -16,7 +17,7 @@ namespace Redwood.Runtime
         }
     }
 
-    internal static class MemberResolver
+    internal static partial class MemberResolver
     {
         internal static bool TryResolve(
             object target, 
@@ -111,6 +112,51 @@ namespace Redwood.Runtime
 
             result = null;
             return false;
+        }
+
+        internal static bool TryResolveOperator(
+            object left,
+            object right,
+            RedwoodType leftTypeHint,
+            RedwoodType rightTypeHint,
+            BinaryOperator op, 
+            out Lambda lambda)
+        {
+            Type leftType = leftTypeHint?.CSharpType ?? left.GetType();
+            Type rightType = rightTypeHint?.CSharpType ?? right.GetType();
+
+            Lambda leftOperators;
+            Lambda rightOperators;
+
+            if (RedwoodType.IsPrimitiveType(leftType))
+            {
+                primitiveOperators[leftType].TryGetValue(new OperatorDescriptor(op), out leftOperators);
+            }
+            else
+            {
+                TryResolveLambda(left, leftTypeHint, RuntimeUtil.NameForOperator(op), out leftOperators);
+            }
+            
+            if (leftTypeHint == rightTypeHint)
+            {
+                rightOperators = null;
+            }
+            else if (RedwoodType.IsPrimitiveType(rightType))
+            {
+                primitiveOperators[rightType].TryGetValue(new OperatorDescriptor(op), out rightOperators);
+            }
+            else
+            {
+                TryResolveLambda(right, rightTypeHint, RuntimeUtil.NameForOperator(op), out rightOperators);
+            }
+
+            lambda = RuntimeUtil.CanonicalizeLambdas(leftOperators, rightOperators);
+            lambda = RuntimeUtil.SelectSingleOverload(
+                new RedwoodType[] { leftTypeHint, rightTypeHint }, 
+                lambda
+            );
+
+            return lambda != null;
         }
     }
 }

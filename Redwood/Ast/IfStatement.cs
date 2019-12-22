@@ -15,14 +15,25 @@ namespace Redwood.Ast
 
         internal override void Bind(Binder binder)
         {
-            throw new NotImplementedException();
+            Condition.Bind(binder);
+            
+            binder.Bookmark();
+            PathTrue.Bind(binder);
+            binder.Checkout();
+
+            if (ElseStatement != null)
+            {
+                binder.Bookmark();
+                ElseStatement.Bind(binder);
+                binder.Checkout();
+            }
         }
 
         internal override IEnumerable<Instruction> Compile()
         {
             IEnumerable<Instruction> compiledCondition = Condition.Compile();
             Instruction[] compiledPathTrue = PathTrue.Compile().ToArray();
-            Instruction[] compiledElseStatement = ElseStatement.Compile().ToArray();
+            Instruction[] compiledElseStatement = ElseStatement?.Compile().ToArray() ?? new Instruction[0];
 
             List<Instruction> instructions = new List<Instruction>();
             instructions.AddRange(compiledCondition);
@@ -31,20 +42,27 @@ namespace Redwood.Ast
                 throw new NotImplementedException();
             }
 
-            instructions.Add(new ConditionalJumpInstruction(compiledPathTrue.Length + 1));
+            // The index of the jump instruction relative to the the else is -1
+            // (ie. right before the start). When we factor in the jump, we need
+            // to skip 2 additional instructions
+            instructions.Add(new ConditionalJumpInstruction(compiledElseStatement.Length + 2));
+            instructions.AddRange(compiledElseStatement);
+            instructions.Add(new JumpInstruction(compiledPathTrue.Length + 1));
             instructions.AddRange(compiledPathTrue);
-            if (ElseStatement != null)
-            {
-                instructions.Add(new JumpInstruction(compiledElseStatement.Length));
-                instructions.AddRange(compiledElseStatement);
-            }
 
             return instructions;
         }
 
         internal override IEnumerable<NameExpression> Walk()
         {
-            throw new NotImplementedException();
+            List<NameExpression> freeVars = new List<NameExpression>();
+            freeVars.AddRange(Condition.Walk());
+            freeVars.AddRange(PathTrue.Walk());
+            if (ElseStatement != null)
+            {
+                freeVars.AddRange(Condition.Walk());
+            }
+            return freeVars;
         }
     }
 }

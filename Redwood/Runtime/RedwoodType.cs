@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Redwood.Runtime
@@ -70,7 +72,22 @@ namespace Redwood.Runtime
 
         public bool HasImplicitConversion(RedwoodType type)
         {
-            return implicitConversionMap.ContainsKey(type);
+            if (CSharpType == null)
+            {
+                return implicitConversionMap.ContainsKey(type);
+            }
+
+            IEnumerable<MethodInfo> implicits =
+                CSharpType.GetTypeInfo().GetDeclaredMethods("op_Implicit");
+
+            return implicits.Any(info =>
+                {
+                    ParameterInfo[] parameters = info.GetParameters();
+                    return parameters.Length == 1 &&
+                           parameters[0].ParameterType != CSharpType &&
+                           info.ReturnType == type.CSharpType;
+                }
+            );
         }
 
         public int AncestorCount(RedwoodType type)
@@ -85,6 +102,19 @@ namespace Redwood.Runtime
             return count;
         }
 
+        public bool IsPrimitiveType()
+        {
+            return CSharpType != null && IsPrimitiveType(CSharpType);
+        }
+
+        internal static bool IsPrimitiveType(Type type)
+        {
+            return type == typeof(int) ||
+                   type == typeof(string) ||
+                   type == typeof(bool) ||
+                   type == typeof(double);
+        }
+
         internal static bool TryGetPrimitiveFromName(string name, out RedwoodType type)
         {
             // TODO: This needs a better structure than just 
@@ -96,6 +126,13 @@ namespace Redwood.Runtime
                     return true;
                 case "string":
                     type = GetForCSharpType(typeof(string));
+                    return true;
+                case "bool":
+                case "boolean":
+                    type = GetForCSharpType(typeof(bool));
+                    return true;
+                case "?": // TODO: Oh boy!
+                    type = null;
                     return true;
                 default:
                     type = null;

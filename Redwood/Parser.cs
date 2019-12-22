@@ -20,6 +20,8 @@ namespace Redwood
     public class Parser
     {
         private const int BufferSize = 1024;
+        private static List<BinaryOpGroupParser> binaryOpParsers;
+
 
         enum TokenType
         {
@@ -55,6 +57,163 @@ namespace Redwood
             lastBuffer = new char[BufferSize];
         }
 
+
+        static Parser()
+        {
+            binaryOpParsers = new List<BinaryOpGroupParser>();
+            // Assign - TODO this is the wrong association direction
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("=", BinaryOperator.Assign, false))
+            );
+
+            // Null coalesce
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("??", BinaryOperator.Coalesce, false))
+            );
+
+            // Logical Or
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("||", BinaryOperator.LogicalOr, false))
+            );
+            // Logical And
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("&&", BinaryOperator.LogicalAnd, false))
+            );
+            // Bitwise Or
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("|", BinaryOperator.BitwiseOr, false))
+            );
+            // Bitwise Xor
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("^", BinaryOperator.BitwiseXor, false))
+            );
+            // Bitwise And
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("&", BinaryOperator.BitwiseAnd, false))
+            );
+            
+            // Equal/NotEqual
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(
+                    new BinaryOpSpec("==", BinaryOperator.Equals, false),
+                    new BinaryOpSpec("!=", BinaryOperator.NotEquals, false)
+                )
+            );
+            
+            // Comparison
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(
+                    new BinaryOpSpec("<", BinaryOperator.LessThan, false),
+                    new BinaryOpSpec(">", BinaryOperator.GreaterThan, false),
+                    new BinaryOpSpec("<=", BinaryOperator.LessThanOrEquals, false),
+                    new BinaryOpSpec(">=", BinaryOperator.GreaterThanOrEquals, false)
+                )
+            );
+
+            // Shift
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(
+                    new BinaryOpSpec("<<", BinaryOperator.LeftShift, false),
+                    new BinaryOpSpec(">>", BinaryOperator.RightShift, false)
+                )
+            );
+
+            // Additive
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(
+                    new BinaryOpSpec("+", BinaryOperator.Add, false),
+                    new BinaryOpSpec("-", BinaryOperator.Subtract, false)
+                )
+            );
+
+            // Multiplicative
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(
+                    new BinaryOpSpec("*", BinaryOperator.Multiply, false),
+                    new BinaryOpSpec("/", BinaryOperator.Divide, false),
+                    new BinaryOpSpec("%", BinaryOperator.Modulus, false)
+                )
+            );
+
+            for (int i = 0; i < binaryOpParsers.Count - 1; i++)
+            {
+                binaryOpParsers[i].next = binaryOpParsers[i + 1];
+            }
+        }
+
+        private class BinaryOpSpec
+        {
+            public string token;
+            public BinaryOperator op;
+            public bool alphaNum;
+            public BinaryOpSpec(string token, BinaryOperator op, bool alphaNum)
+            {
+                this.token = token;
+                this.op = op;
+                this.alphaNum = alphaNum;
+            }
+        }
+        private class BinaryOpGroupParser
+        {
+            BinaryOpSpec[] operators;
+            public BinaryOpGroupParser next;
+            public BinaryOpGroupParser(params BinaryOpSpec[] operators)
+            {
+                this.operators = operators;
+            }
+
+            private async Task<Expression> ParseNext(Parser owner)
+            {
+                if (next == null)
+                {
+                    return await owner.ParsePrimaryTailExpression();
+                }
+                else
+                {
+                    return await next.Parse(owner);
+                }
+            }
+            public async Task<Expression> Parse(Parser owner)
+            {
+                Expression leftMost = await ParseNext(owner);
+                if (leftMost == null)
+                {
+                    throw new NotImplementedException();
+                }
+
+                while (!owner.eof)
+                {
+                    bool progress = false;
+                    foreach (BinaryOpSpec op in operators)
+                    {
+                        if (await owner.MaybeToken(op.token, op.alphaNum))
+                        {
+                            Expression right = await owner.ParseExpression();
+                            if (right == null)
+                            {
+                                throw new NotImplementedException();
+                            }
+                            leftMost = new BinaryOperationExpression
+                            {
+                                Operator = op.op,
+                                Left = leftMost,
+                                Right = right
+                            };
+                            progress = true;
+                            break;
+                        }
+                    }
+
+                    if (!progress)
+                    {
+                        return leftMost;
+                    }
+                }
+
+                throw new NotImplementedException();
+            }
+        }
+
         public async Task<Statement> TryParse()
         {
 
@@ -65,11 +224,11 @@ namespace Redwood
         private async Task<BlockStatement> ParseBlock()
         {
             List<Statement> statements = new List<Statement>();
-            if (await MaybeToken("{"))
+            if (await MaybeToken("{", false))
             {
                 while (!eof)
                 {
-                    if (await MaybeToken("}"))
+                    if (await MaybeToken("}", false))
                     {
                         break;
                     }
@@ -81,32 +240,22 @@ namespace Redwood
                         continue;
                     }
 
-                    statement = await ParseReturnStatement();
-                    if (statement != null)
+                    statement = await ParseStatementOrExpression();
+                    if (statement == null)
                     {
-                        statements.Add(statement);
-                        continue;
+                        throw new NotImplementedException();
                     }
-
-                    // TODO: control structures
-
-                    statement = await ParseExpression();
-                    if (statement != null)
-                    {
-                        if (!await MaybeToken(";"))
-                        {
-                            throw new NotImplementedException();
-                        }
-                        statements.Add(statement);
-                        continue;
-                    }
-
-                    throw new NotImplementedException();
+                    statements.Add(statement);
                 }
             }
             else
             {
-                statements.Add(await ParseExpression());
+                Statement statement = await ParseStatementOrExpression();
+                if (statement == null)
+                {
+                    throw new NotImplementedException();
+                }
+                statements.Add(statement);
             }
 
             return new BlockStatement
@@ -115,7 +264,7 @@ namespace Redwood
             };
         }
 
-        public async Task<Definition> ParseDefinition()
+        internal async Task<Definition> ParseDefinition()
         {
             Definition definition = await ParseFunctionDefinition();
             if (definition != null)
@@ -134,8 +283,8 @@ namespace Redwood
 
         public async Task<FunctionDefinition> ParseFunctionDefinition()
         {
-            bool isStatic = await MaybeToken("static");
-            if (!await MaybeToken("function"))
+            bool isStatic = await MaybeToken("static", true);
+            if (!await MaybeToken("function", true))
             {
                 return null;
             }
@@ -152,12 +301,12 @@ namespace Redwood
             }
             string functionName = LastName;
 
-            if (!await MaybeToken("("))
+            if (!await MaybeToken("(", false))
             {
                 throw new NotImplementedException();
             }
             ParameterDefinition[] parameters;
-            if (await MaybeToken(")"))
+            if (await MaybeToken(")", false))
             {
                 parameters = new ParameterDefinition[0];
             }
@@ -168,7 +317,7 @@ namespace Redwood
                 {
                     throw new NotImplementedException();
                 }
-                if (!await MaybeToken(")"))
+                if (!await MaybeToken(")", false))
                 {
                     throw new NotImplementedException();
                 }
@@ -192,7 +341,7 @@ namespace Redwood
 
         private async Task<LetDefinition> ParseLetDefinition()
         {
-            if (!await MaybeToken("let"))
+            if (!await MaybeToken("let", true))
             {
                 return null;
             }
@@ -210,12 +359,12 @@ namespace Redwood
             string variableName = LastName;
 
             Expression initializer = null;
-            if (await MaybeToken("="))
+            if (await MaybeToken("=", false))
             {
                 initializer = await ParseExpression();
             }
 
-            if (!await MaybeToken(";"))
+            if (!await MaybeToken(";", false))
             {
                 throw new NotImplementedException();
             }
@@ -228,9 +377,36 @@ namespace Redwood
             };
         }
 
-        private async Task<ReturnStatement> ParseReturnStatement()
+        private async Task<Statement> ParseStatementOrExpression()
         {
-            if (!await MaybeToken("return"))
+            Statement statement = await ParseReturn();
+            if (statement != null)
+            {
+                return statement;
+            }
+
+            statement = await ParseIf();
+            if (statement != null)
+            {
+                return statement;
+            }
+
+            statement = await ParseExpression();
+            if (statement != null)
+            {
+                if (!await MaybeToken(";", false))
+                {
+                    throw new NotImplementedException();
+                }
+                return statement;
+            }
+
+            return null;
+        }
+
+        private async Task<ReturnStatement> ParseReturn()
+        {
+            if (!await MaybeToken("return", true))
             {
                 return null;
             }
@@ -241,7 +417,7 @@ namespace Redwood
                 throw new NotImplementedException();
             }
 
-            if (!await MaybeToken(";"))
+            if (!await MaybeToken(";", false))
             {
                 throw new NotImplementedException();
             }
@@ -252,10 +428,53 @@ namespace Redwood
             };
         }
 
+        private async Task<IfStatement> ParseIf()
+        {
+            if (!await MaybeToken("if", true))
+            {
+                return null;
+            }
+
+            Expression condition = await ParseExpression();
+            if (condition == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            Statement pathTrue = await ParseBlock();
+            if (pathTrue == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            Statement elseStatement = null;
+            if (await MaybeToken("else", true))
+            {
+                elseStatement = await ParseBlock();
+                if (elseStatement == null)
+                {
+                    throw new NotImplementedException();
+                }
+            }
+
+            return new IfStatement
+            {
+                Condition = condition,
+                PathTrue = pathTrue,
+                ElseStatement = elseStatement
+            };
+        }
+
         private async Task<Expression> ParseExpression()
         {
-            // TODO
-            return await ParseBaseItemAndTail();
+            // TODO: lambda expression?
+            bool expectClosingParen = await MaybeToken("(", false);
+            Expression e = await binaryOpParsers[0].Parse(this);
+            if (expectClosingParen && !await MaybeToken(")", false))
+            {
+                throw new NotImplementedException();   
+            }
+            return e;
         }
 
         private async Task<TypeSyntax> ParseType()
@@ -266,7 +485,7 @@ namespace Redwood
             }
 
             string typename = LastName;
-            if (!await MaybeToken("<"))
+            if (!await MaybeToken("<", false))
             {
                 return new TypeSyntax
                 {
@@ -286,11 +505,11 @@ namespace Redwood
                     throw new NotImplementedException();
                 }
 
-                if (await MaybeToken(">"))
+                if (await MaybeToken(">", false))
                 {
                     break;
                 }
-                else if (!await MaybeToken(","))
+                else if (!await MaybeToken(",", false))
                 {
                     throw new NotImplementedException();
                 }
@@ -328,7 +547,7 @@ namespace Redwood
                     Type = type
                 });
 
-                if (!await MaybeToken(","))
+                if (!await MaybeToken(",", false))
                 {
                     return parameters.ToArray();
                 }
@@ -347,7 +566,7 @@ namespace Redwood
                     return arguments.ToArray();
                 }
                 arguments.Add(arg);
-                if (!await MaybeToken(","))
+                if (!await MaybeToken(",", false))
                 {
                     return arguments.ToArray();
                 }
@@ -355,7 +574,7 @@ namespace Redwood
             return null;
         }
 
-        private async Task<Expression> ParseBaseItemAndTail()
+        private async Task<Expression> ParsePrimaryTailExpression()
         {
             Expression leftMost = null;
             if (await MaybeName())
@@ -367,7 +586,10 @@ namespace Redwood
             }
             else if (await MaybeInt())
             {
-                throw new NotImplementedException();
+                leftMost = new IntConstant
+                {
+                    Value = LastInt
+                };
             }
             else if (await MaybeDouble())
             {
@@ -383,17 +605,17 @@ namespace Redwood
 
             while (!eof)
             {
-                if (await MaybeToken("(") && leftMost is NameExpression ne)
+                if (await MaybeToken("(", false) && leftMost is NameExpression ne)
                 {
                     Expression[] args;
-                    if (await MaybeToken(")"))
+                    if (await MaybeToken(")", false))
                     {
                         args = new Expression[0];
                     }
                     else
                     {
                         args = await ParseArgumentList();
-                        if (!await MaybeToken(")"))
+                        if (!await MaybeToken(")", false))
                         {
                             throw new NotImplementedException();
                         }
@@ -405,11 +627,11 @@ namespace Redwood
                         Arguments = args
                     };
                 }
-                else if (await MaybeToken("["))
+                else if (await MaybeToken("[", false))
                 {
                     throw new NotImplementedException();
                 }
-                else if (await MaybeToken("."))
+                else if (await MaybeToken(".", false))
                 {
                     if (!await MaybeName())
                     {
@@ -421,17 +643,17 @@ namespace Redwood
                         Name = LastName
                     };
 
-                    if (await MaybeToken("("))
+                    if (await MaybeToken("(", false))
                     {
                         Expression[] args;
-                        if (await MaybeToken(")"))
+                        if (await MaybeToken(")", false))
                         {
                             args = new Expression[0];
                         }
                         else
                         {
                             args = await ParseArgumentList();
-                            if (!await MaybeToken(")"))
+                            if (!await MaybeToken(")", false))
                             {
                                 throw new NotImplementedException();
                             }
@@ -452,6 +674,22 @@ namespace Redwood
                             Element = ne
                         };
                     }
+                }
+                else if (await MaybeToken("++", false))
+                {
+                    leftMost = new UnaryOperationExpression
+                    {
+                        InnerExpression = leftMost,
+                        Operator = UnaryOperator.PostIncrement
+                    };
+                }
+                else if (await MaybeToken("--", false))
+                {
+                    leftMost = new UnaryOperationExpression
+                    {
+                        InnerExpression = leftMost,
+                        Operator = UnaryOperator.PostDecrement
+                    };
                 }
                 else
                 {
@@ -575,7 +813,7 @@ namespace Redwood
             return true;
         }
 
-        private async Task<bool> MaybeToken(string token)
+        private async Task<bool> MaybeToken(string token, bool alphaNumeric)
         {
             await AdvanceToNextToken();
             for (int i = 0; i < token.Length; i++)
@@ -586,6 +824,14 @@ namespace Redwood
                     return false;
                 }
                 await Advance();
+            }
+
+            // If someone has a name that STARTS with a keyword, don't grab the
+            // first half of the name instead of the whole name
+            if (alphaNumeric && char.IsLetterOrDigit(currentBuffer[bufferPos]))
+            {
+                Unget(token.Length);
+                return false;
             }
 
             lastToken = TokenType.Token;
@@ -600,7 +846,7 @@ namespace Redwood
                 return true;
             }
 
-            if (await MaybeToken("\""))
+            if (await MaybeToken("\"", false))
             {
                 StringBuilder sb = new StringBuilder();
                 while (!eof)
@@ -669,7 +915,7 @@ namespace Redwood
             await AdvanceToNextToken();
             NumberStyles style;
             bool hex;
-            if (await MaybeToken("0x"))
+            if (await MaybeToken("0x", false))
             {
                 hex = true;
                 style = NumberStyles.HexNumber;

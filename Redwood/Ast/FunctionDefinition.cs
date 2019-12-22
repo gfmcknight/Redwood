@@ -15,8 +15,8 @@ namespace Redwood.Ast
         public bool Static { get; set; }
         public TypeSyntax ReturnType { get; set; }
 
-        internal int stackSize;
-        internal int closureSize;
+        internal int StackSize { get; set; }
+        internal int ClosureSize { get; set; }
 
         internal override void Bind(Binder binder)
         {
@@ -28,8 +28,8 @@ namespace Redwood.Ast
                 param.Bind(binder);
             }
             Body.Bind(binder);
-            closureSize = binder.GetClosureSize();
-            stackSize = binder.LeaveFullScope();
+            ClosureSize = binder.GetClosureSize();
+            StackSize = binder.LeaveFullScope();
         }
 
         internal override IEnumerable<Instruction> Compile()
@@ -74,19 +74,23 @@ namespace Redwood.Ast
 
         internal InternalLambdaDescription CompileInner()
         {
+            List<Instruction> bodyInstructions = new List<Instruction>();
             RedwoodType[] paramTypes = new RedwoodType[Parameters.Length];
             for (int i = 0; i < Parameters.Length; i++)
             {
                 paramTypes[i] = Parameters[i].Type.GetIndicatedType();
+                bodyInstructions.AddRange(Parameters[i].Compile());
             }
+
+            bodyInstructions.AddRange(Body.Compile());
 
             return new InternalLambdaDescription
             {
                 argTypes = paramTypes,
                 returnType = ReturnType.GetIndicatedType(), // TODO!
-                instructions = Body.Compile().ToArray(),
-                stackSize = stackSize,
-                closureSize = closureSize,
+                instructions = bodyInstructions.ToArray(),
+                stackSize = StackSize,
+                closureSize = ClosureSize,
                 ownerSlot = DeclaredVariable.Location // TODO: is this right?
             };
         }
