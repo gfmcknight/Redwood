@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Redwood.Runtime
@@ -56,6 +57,17 @@ namespace Redwood.Runtime
             }
         }
 
+        internal static RedwoodType[] GetTypesFromMethodInfo(MethodInfo methodInfo)
+        {
+            ParameterInfo[] parameters = methodInfo.GetParameters();
+            RedwoodType[] types = new RedwoodType[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                types[i] = RedwoodType.GetForCSharpType(parameters[i].ParameterType);
+            }
+            return types;
+        }
+
         internal static bool TryConvertToLambda(object o, out Lambda lambda)
         {
             // TODO: Other ways of making a lambda out of an object?
@@ -63,7 +75,7 @@ namespace Redwood.Runtime
             return lambda != null;
         }
 
-        private static void SelectBestOverloads(
+        internal static void SelectBestOverloads(
             RedwoodType[] args,
             RedwoodType[][] overloads,
             /* out */ bool[] candidate)
@@ -183,6 +195,23 @@ namespace Redwood.Runtime
                 return CanonicalizeLambdas(lambdas.FirstOrDefault());
             }
             return CanonicalizeLambdas(lambdas.ToArray());
+        }
+
+        internal static RedwoodType[] GetTypesFromArgs(object[] args)
+        {
+            RedwoodType[] types = new RedwoodType[args.Length];
+            for (int i = 0; i < types.Length; i++)
+            {
+                if (args[i] is RedwoodObject o)
+                {
+                    types[i] = o.Type;
+                }
+                else
+                {
+                    types[i] = RedwoodType.GetForCSharpType(args[i].GetType());
+                }
+            }
+            return types;
         }
 
         internal static Lambda SelectOverloads(RedwoodType[] args, Lambda lambda)

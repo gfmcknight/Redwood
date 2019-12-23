@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Redwood.Instructions;
@@ -36,12 +37,14 @@ namespace Redwood.Ast
         {
             // First, create all the temporary variables we need
             // in order to compute
+            bool fullyResolvedTypes = true;
             List<Instruction> instructions = new List<Instruction>();
             RedwoodType[] argumentTypes = new RedwoodType[Arguments.Length];
             int[] argumentLocations = new int[Arguments.Length];
             for (int i = 0; i < Arguments.Length; i++)
-            {
+            { 
                 argumentTypes[i] = Arguments[i].GetKnownType();
+                fullyResolvedTypes &= argumentTypes[i] != null;
                 argumentLocations[i] = ArgumentVariables[i].Location;
                 instructions.AddRange(Arguments[i].Compile());
                 instructions.Add(Compiler.CompileVariableAssign(ArgumentVariables[i]));
@@ -75,7 +78,7 @@ namespace Redwood.Ast
                 if (calleeType == null)
                 {
                     // Try to resolve on the fly if we can't figure it out
-                    instructions.Add(new LookupExternalMemberInstruction(FunctionName.Name, calleeType));
+                    instructions.Add(new LookupExternalMemberLambdaInstruction(FunctionName.Name, calleeType));
                     instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
                 }
                 else
@@ -90,8 +93,18 @@ namespace Redwood.Ast
                     else
                     {
                         // TODO: Resolve based on the known types of arguments?
-                        instructions.Add(new LookupExternalMemberLambdaInstruction(FunctionName.Name, calleeType));
-                        instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
+                        MethodInfo[] infos;
+                        MemberResolver.TryResolveMethod(null, calleeType, FunctionName.Name, out infos);
+                        MethodGroup group = new MethodGroup(infos);
+                        group.SelectOverloads(argumentTypes);
+
+                        if (group.infos.Length == 0)
+                        {
+                            throw new NotImplementedException();
+                        }
+
+                        instructions.Add(new BuildExternalLambdaInstruction(group));
+                        instructions.Add(new ExternalCallInstruction(argumentLocations));
                     }
                 }
             }

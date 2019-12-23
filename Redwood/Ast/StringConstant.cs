@@ -9,10 +9,16 @@ namespace Redwood.Ast
     public class StringConstant : Expression
     {
         public string Value { get; set; }
+        public override bool Constant { get; } = true;
 
         public override RedwoodType GetKnownType()
         {
             return RedwoodType.GetForCSharpType(typeof(string));
+        }
+
+        public override object EvaluateConstant()
+        {
+            return Value;
         }
 
         internal override void Bind(Binder binder)

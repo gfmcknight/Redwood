@@ -10,6 +10,7 @@ namespace Redwood
         internal string Name { get; set; }
         internal bool Temporary { get; set; }
         internal bool DefinedConstant { get; set; }
+        internal object ConstantValue { get; set; }
         internal bool Mutated { get; set; }
         internal RedwoodType KnownType { get; set; }
         internal bool Global { get; set; }

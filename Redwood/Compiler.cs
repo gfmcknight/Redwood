@@ -4,7 +4,7 @@ using Redwood.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Reflection;
 
 namespace Redwood
 {
@@ -90,6 +90,13 @@ namespace Redwood
 
     public static class Compiler
     {
+        internal static List<Assembly> assemblies = new List<Assembly>();
+
+        public static void ExposeAssembly(Assembly assembly)
+        {
+            assemblies.Add(assembly);
+        }
+
         internal static void MatchVariables(IList<NameExpression> freeVariables,
             IEnumerable<Variable> declaredVariables)
         {
@@ -114,7 +121,11 @@ namespace Redwood
 
         internal static Instruction CompileVariableLookup(Variable variable)
         {
-            if (variable.Closured)
+            if (variable.DefinedConstant && !variable.Mutated)
+            {
+                return new LoadConstantInstruction(variable.ConstantValue);
+            }
+            else if (variable.Closured)
             {
                 return new LookupClosureInstruction(variable.ClosureID, variable.Location);
             }

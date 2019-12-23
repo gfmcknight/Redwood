@@ -41,7 +41,7 @@ namespace Redwood.Ast
 
             return new Instruction[]
             {
-                new BuildLambdaInstruction(CompileInner()),
+                new BuildInternalLambdaInstruction(CompileInner()),
                 Compiler.CompileVariableAssign(DeclaredVariable)
             };
 
@@ -55,7 +55,7 @@ namespace Redwood.Ast
             List<Variable> parameterVars = new List<Variable>();
             foreach (ParameterDefinition param in Parameters)
             {
-                param.Walk();
+                freeVars.AddRange(param.Walk());
                 parameterVars.Add(param.DeclaredVariable);
             }
 
@@ -78,7 +78,7 @@ namespace Redwood.Ast
             RedwoodType[] paramTypes = new RedwoodType[Parameters.Length];
             for (int i = 0; i < Parameters.Length; i++)
             {
-                paramTypes[i] = Parameters[i].Type.GetIndicatedType();
+                paramTypes[i] = Parameters[i].DeclaredVariable.KnownType;
                 bodyInstructions.AddRange(Parameters[i].Compile());
             }
 

@@ -175,7 +175,8 @@ namespace Redwood.Runtime
 
         public object Run(params object[] args)
         {
-            throw new NotImplementedException();
+            RedwoodType[] types = RuntimeUtil.GetTypesFromArgs(args);
+            return RuntimeUtil.SelectSingleOverload(types, this).Run(args);
         }
     }
 }

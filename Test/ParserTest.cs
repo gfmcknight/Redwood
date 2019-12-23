@@ -4,6 +4,7 @@ using Redwood.Runtime;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
@@ -30,9 +31,9 @@ namespace Test
         public async Task FunctionCanBeParsedAndCalled()
         {
             string code = @"
-function string testFunc()
+function<string> testFunc()
 {
-    function string innerTestFunc(string paramA)
+    function<string> innerTestFunc(string paramA)
     {
         return paramA;
     }
@@ -49,10 +50,10 @@ function string testFunc()
         public async Task FunctionCanHoldClosureInformation()
         {
             string code = @"
-function string testFunc()
+function<string> testFunc()
 {
     let string varA = ""Test123"";
-    function string innerTestFunc()
+    function<string> innerTestFunc()
     {
         return varA;
     }
@@ -68,11 +69,11 @@ function string testFunc()
         public async Task FunctionParameterCanBeClosured()
         {
             string code = @"
-function string testFunc()
+function<string> testFunc()
 {
-    function string outerTestFunc(string paramA)
+    function<string> outerTestFunc(string paramA)
     {
-        function string innerTestFunc()
+        function<string> innerTestFunc()
         {
             return paramA;
         }
@@ -89,7 +90,7 @@ function string testFunc()
         public async Task CanUseIfStatements()
         {
             string code = @"
-function string testFunc(bool addTest, bool add123)
+function<string> testFunc(bool addTest, bool add123)
 {
     if addTest
     {
@@ -126,9 +127,9 @@ function string testFunc(bool addTest, bool add123)
         public async Task CanUseAKeywordInVariableNames()
         {
             string code = @"
-function string testFunc()
+function<string> testFunc()
 {
-    function string returnExact(string paramA)
+    function<string> returnExact(string paramA)
     {
         return paramA;
     }
@@ -144,7 +145,7 @@ function string testFunc()
         public async Task CanCallOperators()
         {
             string code = @"
-function string testFunc()
+function<int> testFunc()
 {
     return 2 + 6;
 }";
@@ -157,13 +158,64 @@ function string testFunc()
         public async Task CanConcatenateString()
         {
             string code = @"
-function string testFunc()
+function<string> testFunc()
 {
     return ""Test"" + ""123"";
 }";
 
             Lambda lambda = await MakeLambda(code);
             Assert.Equal("Test123", lambda.Run());
+        }
+
+        [Fact]
+        public async Task OrderOfOperationsWorks()
+        {
+            string code = @"
+function<int> testFunc()
+{
+    return 4 + 2 * 6 - 3 / 2;
+}";
+
+            Lambda lambda = await MakeLambda(code);
+            Assert.Equal(15, lambda.Run());
+        }
+
+        [Fact]
+        public async Task ParentheticalsWork()
+        {
+            string code = @"
+function<int> testFunc()
+{
+    return (4 + 2) * (6 - 3);
+}";
+
+            Lambda lambda = await MakeLambda(code);
+            Assert.Equal(18, lambda.Run());
+        }
+
+        [Fact]
+        public async Task CanCallMethods()
+        {
+            string code = @"
+function<int> testFunc()
+{
+    import Test.SampleClass;
+    function<int> callMethod(SampleClass sc, int x)
+    {
+        return sc.SampleMethod(x);
+    }
+    return callMethod;
+}";
+
+            Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());
+            Lambda lambda = await MakeLambda(code);
+            Lambda innerLambda = lambda.Run() as Lambda;
+            SampleClass sc = new SampleClass
+            {
+                SampleField = 5
+            };
+            Assert.Equal(5, innerLambda.Run(sc, 11));
+            Assert.Equal(11, sc.SampleField);
         }
     }
 }

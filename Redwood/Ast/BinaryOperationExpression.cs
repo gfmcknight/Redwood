@@ -47,19 +47,55 @@ namespace Redwood.Ast
             instructions.AddRange(Right.Compile());
             instructions.Add(Compiler.CompileVariableAssign(TemporaryVariables[1]));
 
-            instructions.Add(new LookupExternalMemberBinaryOperationInstruction(
-                Operator,
-                TemporaryVariables[0].Location,
-                TemporaryVariables[1].Location,
-                Left.GetKnownType(),
-                Right.GetKnownType()));
+            if ((Left.GetKnownType()?.IsPrimitiveType() ?? false) &&
+                (Right.GetKnownType()?.IsPrimitiveType() ?? false))
+            {
+                Lambda binaryOperationLambda;
+                MemberResolver.TryResolveOperator(
+                    null,
+                    null,
+                    Left.GetKnownType(),
+                    Right.GetKnownType(),
+                    Operator,
+                    out binaryOperationLambda);
 
-            instructions.Add(new InPlaceCallInstruction(new int[]
+                if (binaryOperationLambda == null)
                 {
+                    throw new NotImplementedException();
+                }
+
+                // Load and run the lambda on the objects
+                instructions.Add(new LoadConstantInstruction(binaryOperationLambda));
+                instructions.Add(new InPlaceCallInstruction(new int[]
+                    {
+                        TemporaryVariables[0].Location,
+                        TemporaryVariables[1].Location
+                    })
+                );
+            }
+            else
+            {
+                instructions.Add(new LookupExternalMemberBinaryOperationInstruction(
+                    Operator,
                     TemporaryVariables[0].Location,
-                    TemporaryVariables[1].Location
-                })
-            );
+                    TemporaryVariables[1].Location,
+                    Left.GetKnownType(),
+                    Right.GetKnownType()));
+
+                instructions.Add(new TryCallInstruction(
+                    new RedwoodType[]
+                    {
+                        Left.GetKnownType(),
+                        Right.GetKnownType()
+                    },
+                    new int[]
+                    {
+                        TemporaryVariables[0].Location,
+                        TemporaryVariables[1].Location
+                    })
+                );
+            }
+            
 
             return instructions;
         }

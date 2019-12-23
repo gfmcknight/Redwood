@@ -188,7 +188,7 @@ namespace Redwood
                     {
                         if (await owner.MaybeToken(op.token, op.alphaNum))
                         {
-                            Expression right = await owner.ParseExpression();
+                            Expression right = await ParseNext(owner);
                             if (right == null)
                             {
                                 throw new NotImplementedException();
@@ -278,6 +278,12 @@ namespace Redwood
                 return definition;
             }
 
+            definition = await ParseImportDefinition();
+            if (definition != null)
+            {
+                return definition;
+            }
+
             return null;
         }
 
@@ -289,7 +295,21 @@ namespace Redwood
                 return null;
             }
 
-            TypeSyntax returnType = await ParseType();
+
+            TypeSyntax returnType;
+            if (await MaybeToken("<", false))
+            {
+                returnType = await ParseType();
+                if (!await MaybeToken(">", false))
+                {
+                    throw new NotImplementedException();
+                }
+            }
+            else
+            {
+                returnType = null;
+            }
+
             if (returnType == null)
             {
                 throw new NotImplementedException();
@@ -374,6 +394,29 @@ namespace Redwood
                 Name = variableName,
                 Type = type,
                 Initializer = initializer
+            };
+        }
+        
+        private async Task<ImportDefinition> ParseImportDefinition()
+        {
+            if (!await MaybeToken("import", true))
+            {
+                return null;
+            }
+            // TODO: Only parse the non-dotwalk
+            Expression expression = await ParsePrimaryTailExpression();
+            if (!(expression is DotWalkExpression dwe))
+            {
+                throw new NotImplementedException();
+            }
+            if (!await MaybeToken(";", false))
+            {
+                throw new NotImplementedException();
+            }
+
+            return new ImportDefinition
+            {
+                NamespaceWalk = dwe
             };
         }
 
@@ -468,13 +511,7 @@ namespace Redwood
         private async Task<Expression> ParseExpression()
         {
             // TODO: lambda expression?
-            bool expectClosingParen = await MaybeToken("(", false);
-            Expression e = await binaryOpParsers[0].Parse(this);
-            if (expectClosingParen && !await MaybeToken(")", false))
-            {
-                throw new NotImplementedException();   
-            }
-            return e;
+            return await binaryOpParsers[0].Parse(this);
         }
 
         private async Task<TypeSyntax> ParseType()
@@ -574,9 +611,26 @@ namespace Redwood
             return null;
         }
 
+
         private async Task<Expression> ParsePrimaryTailExpression()
         {
             Expression leftMost = null;
+
+            // Parse a parenthetical expression
+            if (await MaybeToken("(", false))
+            {
+                leftMost = await ParseExpression();
+                if (leftMost == null)
+                {
+                    throw new NotImplementedException();
+                }
+                if (!await MaybeToken(")", false))
+                {
+                    throw new NotImplementedException();
+                }
+            }
+
+            
             if (await MaybeName())
             {
                 leftMost = new NameExpression
@@ -605,7 +659,7 @@ namespace Redwood
 
             while (!eof)
             {
-                if (await MaybeToken("(", false) && leftMost is NameExpression ne)
+                if (leftMost is NameExpression ne && await MaybeToken("(", false))
                 {
                     Expression[] args;
                     if (await MaybeToken(")", false))

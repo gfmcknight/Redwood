@@ -39,6 +39,10 @@ namespace Redwood.Ast
         {
             base.Walk(); // TODO: will we ever need the result of this?
             DeclaredVariable.DefinedConstant = Initializer.Constant;
+            if (Initializer.Constant)
+            {
+                DeclaredVariable.ConstantValue = Initializer.EvaluateConstant();
+            }
             return Initializer?.Walk() ?? new NameExpression[0];
         }
     }

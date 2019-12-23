@@ -11,9 +11,30 @@ namespace Redwood.Runtime
     {
         internal MethodInfo[] infos;
 
-        public MethodGroup(MethodInfo[] infos)
+        internal MethodGroup(MethodInfo[] infos)
         {
             this.infos = infos;
+        }
+
+        internal void SelectOverloads(RedwoodType[] argumentTypes)
+        {
+            bool[] candidates = new bool[infos.Length];
+            RedwoodType[][] overloads = new RedwoodType[infos.Length][];
+            for (int i = 0; i < infos.Length; i++)
+            {
+                overloads[i] = RuntimeUtil.GetTypesFromMethodInfo(infos[i]);
+            }
+            RuntimeUtil.SelectBestOverloads(argumentTypes, overloads, candidates);
+
+            List<MethodInfo> selectedInfos = new List<MethodInfo>();
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                if (candidates[i])
+                {
+                    selectedInfos.Add(infos[i]);
+                }
+            }
+            infos = selectedInfos.ToArray();
         }
     }
 

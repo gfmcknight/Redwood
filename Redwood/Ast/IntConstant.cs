@@ -10,6 +10,7 @@ namespace Redwood.Ast
     public class IntConstant : Expression
     {
         public BigInteger Value { get; set; }
+        public override bool Constant { get; } = true;
 
         public override RedwoodType GetKnownType()
         {
@@ -18,6 +19,11 @@ namespace Redwood.Ast
                 return RedwoodType.GetForCSharpType(typeof(int));
             }
             return RedwoodType.GetForCSharpType(typeof(BigInteger));
+        }
+
+        public override object EvaluateConstant()
+        {
+            return Value;
         }
 
         internal override void Bind(Binder binder)

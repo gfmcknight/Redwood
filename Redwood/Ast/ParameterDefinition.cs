@@ -28,9 +28,9 @@ namespace Redwood.Ast
             {
                 DeclaredVariable.KnownType = type;
             }
-            else
+            else if (Type.TypeName.Variable.DefinedConstant && !Type.TypeName.Variable.Mutated)
             {
-                throw new NotImplementedException("Non-primitive types");
+                DeclaredVariable.KnownType = Type.TypeName.Variable.ConstantValue as RedwoodType;
             }
 
             // In the case that we have a closured variable, we still need
