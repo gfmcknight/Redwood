@@ -1,0 +1,12 @@
+﻿import Test.RAssert;
+
+function<int> increment(int value)
+{
+    return value + 1;
+}
+
+function<int> testMain(RAssert assert)
+{
+    assert.Equal(3, increment(2));
+    return 0;
+}

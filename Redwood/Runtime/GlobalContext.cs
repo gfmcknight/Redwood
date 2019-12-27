@@ -4,16 +4,23 @@ using System.Text;
 
 namespace Redwood.Runtime
 {
-    internal class GlobalContext
+    public class GlobalContext
     {
-        internal object LookupVariable(string name)
+        private Dictionary<string, object> elements;
+
+        internal GlobalContext()
         {
-            throw new NotImplementedException();
+            elements = new Dictionary<string, object>();
+        }
+
+        public object LookupVariable(string name)
+        {
+            return elements.GetValueOrDefault(name);
         }
 
         internal void AssignVariable(string name, object result)
         {
-            throw new NotImplementedException();
+            elements[name] = result;
         }
     }
 }

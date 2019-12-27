@@ -39,6 +39,8 @@ namespace Redwood.Ast
         internal List<Variable> TemporaryVariables { get; set; }
         internal string ReflectedOperatorName { get; set; }
 
+        internal Lambda ResolvedOperator { get; set; }
+
         internal override IEnumerable<Instruction> Compile()
         {
             List<Instruction> instructions = new List<Instruction>();
@@ -47,31 +49,28 @@ namespace Redwood.Ast
             instructions.AddRange(Right.Compile());
             instructions.Add(Compiler.CompileVariableAssign(TemporaryVariables[1]));
 
-            if ((Left.GetKnownType()?.IsPrimitiveType() ?? false) &&
-                (Right.GetKnownType()?.IsPrimitiveType() ?? false))
+            if (ResolvedOperator != null)
             {
-                Lambda binaryOperationLambda;
-                MemberResolver.TryResolveOperator(
-                    null,
-                    null,
-                    Left.GetKnownType(),
-                    Right.GetKnownType(),
-                    Operator,
-                    out binaryOperationLambda);
 
-                if (binaryOperationLambda == null)
+                int[] argumentLocations = new int[]
                 {
-                    throw new NotImplementedException();
-                }
-
+                    TemporaryVariables[0].Location,
+                    TemporaryVariables[1].Location
+                };
                 // Load and run the lambda on the objects
-                instructions.Add(new LoadConstantInstruction(binaryOperationLambda));
-                instructions.Add(new InPlaceCallInstruction(new int[]
-                    {
-                        TemporaryVariables[0].Location,
-                        TemporaryVariables[1].Location
-                    })
-                );
+                instructions.Add(new LoadConstantInstruction(ResolvedOperator));
+                if (ResolvedOperator is InPlaceLambda)
+                {
+                    instructions.Add(new InPlaceCallInstruction(argumentLocations));
+                }
+                else if (ResolvedOperator is InternalLambda)
+                {
+                    instructions.Add(new InternalCallInstruction(argumentLocations));
+                }
+                else
+                {
+                    instructions.Add(new ExternalCallInstruction(argumentLocations));
+                }
             }
             else
             {
@@ -135,6 +134,30 @@ namespace Redwood.Ast
             Right.Bind(binder);
             
             binder.Checkout();
+
+            if (Left.GetKnownType() != null && Right.GetKnownType() != null)
+            {
+                // Resolve the static method
+                MemberResolver.TryResolveOperator(
+                    null,
+                    null,
+                    Left.GetKnownType(),
+                    Right.GetKnownType(),
+                    Operator,
+                    out Lambda binaryOperationLambda);
+
+                if (binaryOperationLambda == null)
+                {
+                    throw new NotImplementedException();
+                }
+
+                ResolvedOperator = binaryOperationLambda;
+            }
+        }
+
+        public override RedwoodType GetKnownType()
+        {
+            return ResolvedOperator?.ReturnType;
         }
     }
 }

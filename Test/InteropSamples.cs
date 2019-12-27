@@ -15,5 +15,14 @@ namespace Test
             SampleField = value;
             return lastValue;
         }
+
+        public static SampleClass operator +(SampleClass a, SampleClass b)
+        {
+            return new SampleClass
+            {
+                SampleField = a.SampleField + b.SampleField,
+                SampleProperty = a.SampleProperty + b.SampleProperty
+            };
+        }
     }
 }

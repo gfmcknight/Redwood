@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Redwood.Runtime
 {
-    class RedwoodObject
+    public class RedwoodObject
     {
         // The fields/values attached to this object
         internal object[] slots;

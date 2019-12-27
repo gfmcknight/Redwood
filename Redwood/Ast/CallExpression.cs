@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,36 +16,121 @@ namespace Redwood.Ast
         public Expression[] Arguments { get; set; }
 
         internal List<Variable> ArgumentVariables { get; set; }
+        internal bool FullyResolved { get; set; }
+        internal RedwoodType LambdaType { get; set; }
+        internal MethodGroup ExternalMethodGroup { get; set; }
 
         internal override void Bind(Binder binder)
         {
             // We have a series of temporary variables, so we will need
             // to discard them after the call is made
             binder.Bookmark();
-            // TODO: definitions in arguments? This shouldn't occur..
-            foreach (Expression argument in Arguments)
+            
+            // We have the process
+            // Eval arg i, assign variable i, eval arg i+1, assign variable i+1
+            // so if we, for instance, bind every argument, then bind every temp
+            // variable, we are sure to clobber our own arguments
+            for (int i = 0; i < Arguments.Length; i++)
             {
-                argument.Bind(binder);
+                Arguments[i].Bind(binder);
+                binder.BindVariable(ArgumentVariables[i]);
             }
-            foreach (Variable argumentVariable in ArgumentVariables)
-            {
-                binder.BindVariable(argumentVariable);
-            }
+            
             binder.Checkout();
+
+
+            bool fullyResolvedTypes;
+            if (Callee == null)
+            {
+                fullyResolvedTypes = FunctionName.GetKnownType() != null;
+            }
+            else
+            {
+                fullyResolvedTypes = Callee.GetKnownType() != null;
+            }
+
+            RedwoodType[] argumentTypes = new RedwoodType[Arguments.Length];
+            for (int i = 0; i < Arguments.Length; i++)
+            {
+                argumentTypes[i] = Arguments[i].GetKnownType();
+                // Not really sure whether we care about this, but it might be useful
+                // for compiling variable assignments
+                ArgumentVariables[i].KnownType = argumentTypes[i];
+                fullyResolvedTypes &= argumentTypes[i] != null;
+            }
+            
+            // If we have fully resolved types (ie. all argument types are known
+            // and so is the 
+            FullyResolved = fullyResolvedTypes;
+            // We have two options for determining an exact type, either:
+            // 1) The method is fully resolved. One lambda type will come out of
+            //    the many,
+            // or
+            // 2) the method is not fully resolved, but the provided arguments
+            //    narrow the methods down a single option.
+            if (Callee == null)
+            {
+                LambdaType = FunctionName.GetKnownType();
+            }
+            else if (Callee.GetKnownType() == null)
+            {
+                LambdaType = null;
+            }
+            else if (Callee.GetKnownType().CSharpType == null)
+            {
+                // TODO
+                throw new NotImplementedException();
+            }
+            else
+            {
+                // TODO: Resolve based on the known types of arguments?
+                MethodInfo[] infos;
+                bool methodExists = MemberResolver.TryResolveMethod(
+                    null,
+                    Callee.GetKnownType(),
+                    FunctionName.Name,
+                    false,
+                    out infos);
+                
+                if (!methodExists)
+                {
+                    // TODO: Can an object have a lambda field?
+                    throw new NotImplementedException();
+                }
+                ExternalMethodGroup = new MethodGroup(infos);
+                ExternalMethodGroup.SelectOverloads(argumentTypes);
+
+                if (ExternalMethodGroup.infos.Length == 0)
+                {
+                    throw new NotImplementedException();
+                }
+                else if (ExternalMethodGroup.infos.Length == 1)
+                {
+                    RedwoodType returnType =
+                        RedwoodType.GetForCSharpType(ExternalMethodGroup.infos[0].ReturnType);
+                   
+                    RedwoodType[] paramTypes = ExternalMethodGroup.infos[0].GetParameters()
+                        .Select(param => RedwoodType.GetForCSharpType(param.ParameterType))
+                        .ToArray();
+
+                    LambdaType = RedwoodType.GetForLambdaArgsTypes(
+                        typeof(ExternalLambda),
+                        returnType,
+                        paramTypes);
+                }
+            }
         }
 
         internal override IEnumerable<Instruction> Compile()
         {
             // First, create all the temporary variables we need
             // in order to compute
-            bool fullyResolvedTypes = true;
             List<Instruction> instructions = new List<Instruction>();
             RedwoodType[] argumentTypes = new RedwoodType[Arguments.Length];
             int[] argumentLocations = new int[Arguments.Length];
             for (int i = 0; i < Arguments.Length; i++)
             { 
                 argumentTypes[i] = Arguments[i].GetKnownType();
-                fullyResolvedTypes &= argumentTypes[i] != null;
                 argumentLocations[i] = ArgumentVariables[i].Location;
                 instructions.AddRange(Arguments[i].Compile());
                 instructions.Add(Compiler.CompileVariableAssign(ArgumentVariables[i]));
@@ -58,15 +144,11 @@ namespace Redwood.Ast
                 {
                     instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
                 }
-                else if (RedwoodType
-                            .GetForCSharpType(typeof(InternalLambda))
-                            .IsAssignableFrom(knownType))
+                else if (knownType.CSharpType == typeof(InternalLambda))
                 {
                     instructions.Add(new InternalCallInstruction(argumentLocations));
                 }
-                else if (RedwoodType
-                            .GetForCSharpType(typeof(Lambda))
-                            .IsAssignableFrom(knownType))
+                else if (knownType.CSharpType == typeof(ExternalLambda))
                 {
                     instructions.Add(new ExternalCallInstruction(argumentLocations));
                 }
@@ -92,24 +174,12 @@ namespace Redwood.Ast
                     }
                     else
                     {
-                        // TODO: Resolve based on the known types of arguments?
-                        MethodInfo[] infos;
-                        MemberResolver.TryResolveMethod(null, calleeType, FunctionName.Name, out infos);
-                        MethodGroup group = new MethodGroup(infos);
-                        group.SelectOverloads(argumentTypes);
-
-                        if (group.infos.Length == 0)
-                        {
-                            throw new NotImplementedException();
-                        }
-
-                        instructions.Add(new BuildExternalLambdaInstruction(group));
+                        instructions.Add(new BuildExternalLambdaInstruction(ExternalMethodGroup));
                         instructions.Add(new ExternalCallInstruction(argumentLocations));
                     }
                 }
             }
 
-            
             return instructions;
         }
 
@@ -139,6 +209,24 @@ namespace Redwood.Ast
                 freeVariables.AddRange(argument.Walk());
             }
             return freeVariables;
+        }
+
+        public override RedwoodType GetKnownType()
+        {
+            if (LambdaType == null)
+            {
+                return null;
+            }
+
+            RedwoodType[] signature = LambdaType.GenericArguments;
+            // Don't know the type of the lambda's arguments/return?
+            if (signature == null || signature.Length == 0)
+            {
+                throw new NotImplementedException();
+            }
+
+            // The lambda type is Lambda<ParamTypes..., ReturnType>
+            return signature[signature.Length - 1];
         }
     }
 }

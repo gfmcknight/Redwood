@@ -46,12 +46,12 @@ namespace Redwood.Runtime
             string name, 
             out object result)
         {
-            if (TryResolveMember(target, targetTypeHint, name, out result))
+            if (TryResolveMember(target, targetTypeHint, name, target == null, out result))
             {
                 return true;
             }
 
-            if (TryResolveMethod(target, targetTypeHint, name, out MethodInfo[] group))
+            if (TryResolveMethod(target, targetTypeHint, name, false, out MethodInfo[] group))
             {
                 result = new LambdaGroup(target, group);
                 return true;
@@ -67,7 +67,10 @@ namespace Redwood.Runtime
             string name,
             out Lambda result)
         {
-            if (TryResolveMethod(target, targetTypeHint, name, out MethodInfo[] group))
+            bool @static = target == null || target is RedwoodType;
+
+
+            if (TryResolveMethod(target, targetTypeHint, name, target == null, out MethodInfo[] group))
             {
                 if (group.Length == 1)
                 {
@@ -80,7 +83,7 @@ namespace Redwood.Runtime
                 return true;
             }
 
-            if (TryResolveMember(target, targetTypeHint, name, out object member))
+            if (TryResolveMember(target, targetTypeHint, name, target == null, out object member))
             {
                 return RuntimeUtil.TryConvertToLambda(member, out result);
             }
@@ -93,10 +96,19 @@ namespace Redwood.Runtime
             object target,
             RedwoodType targetTypeHint,
             string name,
+            bool @static,
             out MethodInfo[] result)
         {
+            BindingFlags flags = @static ?
+                (BindingFlags.Public | BindingFlags.Static) : 
+                (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
             Type type = targetTypeHint?.CSharpType ?? target.GetType();
-            MethodInfo[] methods = type.GetTypeInfo().GetDeclaredMethods(name).ToArray();
+            MethodInfo[] methods = type
+                .GetTypeInfo()
+                .GetMethods(flags)
+                .Where(method => method.Name == name)
+                .ToArray();
 
             if (methods.Length > 0)
             {
@@ -112,19 +124,25 @@ namespace Redwood.Runtime
             object target,
             RedwoodType targetTypeHint,
             string name,
+            bool @static,
             out object result)
         {
+            BindingFlags flags = @static ?
+                (BindingFlags.Public | BindingFlags.Static) :
+                (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
             Type type = targetTypeHint?.CSharpType ?? target.GetType();
             TypeInfo typeInfo = type.GetTypeInfo();
-            
-            PropertyInfo property = typeInfo.GetDeclaredProperty(name);
+
+            PropertyInfo property = typeInfo.GetProperty(name, flags); ;
+
             if (property != null)
             {
                 result = property.GetValue(target);
                 return true;
             }
 
-            FieldInfo field = typeInfo.GetDeclaredField(name);
+            FieldInfo field = typeInfo.GetField(name, flags); ;
             if (field != null)
             {
                 result = field.GetValue(target);
@@ -140,7 +158,7 @@ namespace Redwood.Runtime
             object right,
             RedwoodType leftTypeHint,
             RedwoodType rightTypeHint,
-            BinaryOperator op, 
+            BinaryOperator op,
             out Lambda lambda)
         {
             Type leftType = leftTypeHint?.CSharpType ?? left.GetType();

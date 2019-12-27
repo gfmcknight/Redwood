@@ -214,11 +214,23 @@ namespace Redwood
             }
         }
 
-        public async Task<Statement> TryParse()
+        public async Task<TopLevel> ParseModule()
         {
+            List<Definition> definitions = new List<Definition>();
+            while (!eof)
+            {
+                Definition definition = await ParseDefinition();
+                if (definition == null)
+                {
+                    break;
+                }
+                definitions.Add(definition);
+            }
 
-
-            return null;
+            return new TopLevel
+            {
+                Definitions = (definitions.ToArray())
+            };
         }
 
         private async Task<BlockStatement> ParseBlock()
@@ -516,6 +528,18 @@ namespace Redwood
 
         private async Task<TypeSyntax> ParseType()
         {
+            if (await MaybeToken("?", false))
+            {
+                return new TypeSyntax
+                {
+                    TypeName = new NameExpression
+                    {
+                        Name = "?"
+                    }
+                };
+
+            }
+
             if (!await MaybeName())
             {
                 return null;

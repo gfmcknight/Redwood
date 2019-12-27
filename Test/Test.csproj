@@ -17,4 +17,10 @@
     <ProjectReference Include="..\Redwood\Redwood.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="FileTests\simple_test.rwd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

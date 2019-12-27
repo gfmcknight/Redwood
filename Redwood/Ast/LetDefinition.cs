@@ -13,10 +13,12 @@ namespace Redwood.Ast
         internal override void Bind(Binder binder)
         {
             base.Bind(binder);
+            DeclaredVariable.KnownType = Type.GetIndicatedType();
             if (Initializer != null)
             {
                 Initializer.Bind(binder);
             }
+            // TODO: check that the initializer's type is assignable?
         }
 
         internal override IEnumerable<Instruction> Compile()

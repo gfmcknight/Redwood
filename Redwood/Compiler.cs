@@ -94,7 +94,11 @@ namespace Redwood
 
         public static void ExposeAssembly(Assembly assembly)
         {
-            assemblies.Add(assembly);
+            // TODO: how many assemblies could we possibly expect?
+            if (!assemblies.Contains(assembly))
+            {
+                assemblies.Add(assembly);
+            }
         }
 
         internal static void MatchVariables(IList<NameExpression> freeVariables,
@@ -125,13 +129,13 @@ namespace Redwood
             {
                 return new LoadConstantInstruction(variable.ConstantValue);
             }
-            else if (variable.Closured)
-            {
-                return new LookupClosureInstruction(variable.ClosureID, variable.Location);
-            }
             else if (variable.Global)
             {
                 return new LookupGlobalInstruction(variable.Name);
+            }
+            else if (variable.Closured)
+            {
+                return new LookupClosureInstruction(variable.ClosureID, variable.Location);
             }
             else
             {
@@ -141,18 +145,47 @@ namespace Redwood
 
         internal static Instruction CompileVariableAssign(Variable variable)
         {
-            if (variable.Closured)
-            {
-                return new AssignClosureInstruction(variable.ClosureID, variable.Location);
-            }
-            else if (variable.Global)
+            if (variable.Global)
             {
                 return new AssignGlobalInstruction(variable.Name);
+            }
+            else if (variable.Closured)
+            {
+                return new AssignClosureInstruction(variable.ClosureID, variable.Location);
             }
             else
             {
                 return new AssignLocalInstruction(variable.Location);
             }
+        }
+
+        public static GlobalContext CompileModule(TopLevel toplevel)
+        {
+            IEnumerable<NameExpression> freeVars = toplevel.Walk();
+            if (freeVars.Count() > 0)
+            {
+                throw new NotImplementedException();
+            }
+
+            toplevel.Bind(new Binder());
+            GlobalContext context = new GlobalContext();
+            InternalLambda initializationLambda = new InternalLambda
+            {
+                closures = new Closure[0],
+                description = new InternalLambdaDescription
+                {
+                    argTypes = new RedwoodType[0],
+                    // All fields should go the global definition
+                    stackSize = 0,
+                    closureSize = 0,
+                    instructions = toplevel.Compile().ToArray(),
+                    returnType = null
+                },
+                context = context
+            };
+            // Populate the global context
+            initializationLambda.Run();
+            return context;
         }
 
         public static Lambda CompileFunction(FunctionDefinition function)

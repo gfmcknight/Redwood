@@ -27,6 +27,20 @@ namespace Test
             return Compiler.CompileFunction(function);
         }
 
+        private async Task<GlobalContext> MakeModule(string code)
+        {
+            Parser parser = new Parser(
+                new StreamReader(
+                    new MemoryStream(
+                        Encoding.UTF8.GetBytes(code)
+                    )
+                )
+            );
+            TopLevel module = await parser.ParseModule();
+            Assert.NotNull(module);
+            return Compiler.CompileModule(module);
+        }
+
         [Fact]
         public async Task FunctionCanBeParsedAndCalled()
         {
@@ -216,6 +230,58 @@ function<int> testFunc()
             };
             Assert.Equal(5, innerLambda.Run(sc, 11));
             Assert.Equal(11, sc.SampleField);
+        }
+
+        [Fact]
+        public async Task CanParseModules()
+        {
+            string code = @"
+import Test.SampleClass;
+function<int> testFunc(SampleClass sc, int x)
+{
+    return sc.SampleMethod(x);
+}";
+
+            Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());
+            GlobalContext module = await MakeModule(code);
+            Lambda lambda = module.LookupVariable("testFunc") as Lambda;
+            SampleClass sc = new SampleClass
+            {
+                SampleField = 5
+            };
+            Assert.Equal(5, lambda.Run(sc, 11));
+            Assert.Equal(11, sc.SampleField);
+        }
+
+        [Fact]
+        public async Task CanResolveOperatorsOnKnownTypes()
+        {
+            string code = @"
+import Test.SampleClass;
+function<SampleClass> testFunc(SampleClass sc1, SampleClass sc2)
+{
+    return sc1 + sc2;
+}";
+
+            Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());
+            GlobalContext module = await MakeModule(code);
+            Lambda lambda = module.LookupVariable("testFunc") as Lambda;
+            SampleClass sc1 = new SampleClass
+            {
+                SampleField = 5,
+                SampleProperty = 2
+            };
+
+            SampleClass sc2 = new SampleClass
+            {
+                SampleField = 7,
+                SampleProperty = 2
+            };
+            object result = lambda.Run(sc1, sc2);
+            Assert.IsType<SampleClass>(result);
+            SampleClass scResult = result as SampleClass;
+            Assert.Equal(12, scResult.SampleField);
+            Assert.Equal(4, scResult.SampleProperty);
         }
     }
 }

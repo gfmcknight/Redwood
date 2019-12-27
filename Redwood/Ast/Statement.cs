@@ -19,7 +19,8 @@ namespace Redwood.Ast
 
         /// <summary>
         /// Walks the AST and binds types expressions and resolves
-        /// overloads, when possible.
+        /// overloads, when possible, while also determining where
+        /// a variable will be (in the stack/closure)
         /// </summary>
         internal abstract void Bind(Binder binder);
 

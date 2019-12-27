@@ -20,7 +20,11 @@ namespace Redwood.Ast
 
         internal override void Bind(Binder binder)
         {
-            DeclaredVariable.KnownType = RedwoodType.GetForCSharpType(typeof(InternalLambda));
+            DeclaredVariable.KnownType = RedwoodType.GetForLambdaArgsTypes(
+                typeof(InternalLambda),
+                ReturnType.GetIndicatedType(),
+                Parameters.Select(param => param.Type.GetIndicatedType()).ToArray());
+            //DeclaredVariable.KnownType = RedwoodType.GetForCSharpType(typeof(InternalLambda));
             base.Bind(binder);
             binder.EnterFullScope();
             foreach (ParameterDefinition param in Parameters)
