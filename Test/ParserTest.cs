@@ -283,5 +283,43 @@ function<SampleClass> testFunc(SampleClass sc1, SampleClass sc2)
             Assert.Equal(12, scResult.SampleField);
             Assert.Equal(4, scResult.SampleProperty);
         }
+
+        [Fact]
+        public async Task CanAccessPropertiesAndFields()
+        {
+            string code = @"
+import Test.SampleClass;
+function<int> testFunc(SampleClass sc, int x)
+{
+    return sc.SampleField + sc.SampleProperty + x;
+}";
+
+            Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());
+            GlobalContext module = await MakeModule(code);
+            Lambda lambda = module.LookupVariable("testFunc") as Lambda;
+            SampleClass sc = new SampleClass
+            {
+                SampleField = 5,
+                SampleProperty = 3
+            };
+            Assert.Equal(10, lambda.Run(sc, 2));
+        }
+
+        [Fact]
+        public async Task CanAssignVariables()
+        {
+            string code = @"
+function<int> testFunc()
+{
+    let int x = 2;
+    x = x + 3;
+    x = x + 5;
+    x = x - 2;
+    return x;
+}";
+
+            Lambda lambda = await MakeLambda(code);
+            Assert.Equal(8, lambda.Run());
+        }
     }
 }

@@ -22,9 +22,8 @@ namespace Redwood.Ast
         {
             DeclaredVariable.KnownType = RedwoodType.GetForLambdaArgsTypes(
                 typeof(InternalLambda),
-                ReturnType.GetIndicatedType(),
+                ReturnType?.GetIndicatedType() ?? RedwoodType.Void,
                 Parameters.Select(param => param.Type.GetIndicatedType()).ToArray());
-            //DeclaredVariable.KnownType = RedwoodType.GetForCSharpType(typeof(InternalLambda));
             base.Bind(binder);
             binder.EnterFullScope();
             foreach (ParameterDefinition param in Parameters)
@@ -54,7 +53,11 @@ namespace Redwood.Ast
         internal override IEnumerable<NameExpression> Walk()
         {
             List<NameExpression> freeVars = base.Walk().ToList();
-            freeVars.AddRange(ReturnType.Walk());
+            // Having no return type syntax -> Void return type
+            if (ReturnType != null)
+            {
+                freeVars.AddRange(ReturnType.Walk());
+            }
 
             List<Variable> parameterVars = new List<Variable>();
             foreach (ParameterDefinition param in Parameters)
@@ -87,11 +90,15 @@ namespace Redwood.Ast
             }
 
             bodyInstructions.AddRange(Body.Compile());
+            if (ReturnType == null || ReturnType.GetIndicatedType() == RedwoodType.Void)
+            {
+                bodyInstructions.Add(new ReturnInstruction());
+            }
 
             return new InternalLambdaDescription
             {
                 argTypes = paramTypes,
-                returnType = ReturnType.GetIndicatedType(), // TODO!
+                returnType = ReturnType?.GetIndicatedType() ?? RedwoodType.Void,
                 instructions = bodyInstructions.ToArray(),
                 stackSize = StackSize,
                 closureSize = ClosureSize,

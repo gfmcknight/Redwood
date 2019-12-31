@@ -18,6 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="FileTests\class_def_test.rwd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="FileTests\simple_test.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

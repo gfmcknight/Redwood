@@ -52,4 +52,29 @@ namespace Redwood.Instructions
             return 1;
         }
     }
+
+    internal class AssignDirectMemberInstruction : Instruction
+    {
+        private int slot;
+
+        public int Execute(Frame frame)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class AssignConstructorLambda : Instruction
+    {
+        RedwoodType type;
+        internal AssignConstructorLambda(RedwoodType type)
+        {
+            this.type = type;
+        }
+
+        public int Execute(Frame frame)
+        {
+            type.Constructor = frame.result as Lambda;
+            return 1;
+        }
+    }
 }

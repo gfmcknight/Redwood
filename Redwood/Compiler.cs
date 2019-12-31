@@ -31,7 +31,11 @@ namespace Redwood
                 return;
             }
 
-            if (variable.Closured)
+            if (variable.Global)
+            {
+                return;
+            }
+            else if (variable.Closured)
             {
                 variable.ClosureID = closurePosition.Count - 1;
                 variable.Location = closurePosition[closurePosition.Count - 1];
@@ -117,6 +121,11 @@ namespace Redwood
                     {
                         variablesByName[name].Closured = true;
                     }
+                    if (freeVariables[i].InLVal)
+                    {
+                        variablesByName[name].Mutated = true;
+                    }
+
                     freeVariables[i].Variable = variablesByName[name];
                     freeVariables.RemoveAt(i);
                 }
@@ -167,7 +176,9 @@ namespace Redwood
                 throw new NotImplementedException();
             }
 
-            toplevel.Bind(new Binder());
+            Binder binder = new Binder();
+            binder.EnterFullScope();
+            toplevel.Bind(binder);
             GlobalContext context = new GlobalContext();
             InternalLambda initializationLambda = new InternalLambda
             {
@@ -175,8 +186,9 @@ namespace Redwood
                 description = new InternalLambdaDescription
                 {
                     argTypes = new RedwoodType[0],
-                    // All fields should go the global definition
-                    stackSize = 0,
+                    // All fields should go the global definition, but some
+                    // temporary variables may be used to define constructors
+                    stackSize = binder.LeaveFullScope(),
                     closureSize = 0,
                     instructions = toplevel.Compile().ToArray(),
                     returnType = null

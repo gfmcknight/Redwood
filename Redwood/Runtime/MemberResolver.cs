@@ -120,6 +120,24 @@ namespace Redwood.Runtime
             return false;
         }
 
+        internal static void TryResolveMember(
+            RedwoodType targetTypeHint,
+            string name,
+            bool @static,
+            out PropertyInfo property,
+            out FieldInfo field)
+        {
+            BindingFlags flags = @static ?
+                (BindingFlags.Public | BindingFlags.Static) :
+                (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
+            Type type = targetTypeHint?.CSharpType;
+            TypeInfo typeInfo = type.GetTypeInfo();
+
+            property = typeInfo.GetProperty(name, flags);
+            field = typeInfo.GetField(name, flags);
+        }
+
         internal static bool TryResolveMember(
             object target,
             RedwoodType targetTypeHint,
@@ -134,7 +152,7 @@ namespace Redwood.Runtime
             Type type = targetTypeHint?.CSharpType ?? target.GetType();
             TypeInfo typeInfo = type.GetTypeInfo();
 
-            PropertyInfo property = typeInfo.GetProperty(name, flags); ;
+            PropertyInfo property = typeInfo.GetProperty(name, flags);
 
             if (property != null)
             {

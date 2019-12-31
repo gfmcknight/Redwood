@@ -17,6 +17,7 @@ namespace Redwood.Ast
         Parity,
         Await
     }
+
     public class UnaryOperationExpression : Expression
     {
         public UnaryOperator Operator { get; set; }
@@ -28,6 +29,11 @@ namespace Redwood.Ast
         }
 
         internal override IEnumerable<Instruction> Compile()
+        {
+            throw new NotImplementedException();
+        }
+
+        internal override IEnumerable<Instruction> CompileLVal()
         {
             throw new NotImplementedException();
         }

@@ -35,5 +35,10 @@ namespace Redwood.Ast
         {
             return Variable?.KnownType;
         }
+
+        internal override IEnumerable<Instruction> CompileLVal()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

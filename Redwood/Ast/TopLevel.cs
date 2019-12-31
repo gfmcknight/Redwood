@@ -11,10 +11,22 @@ namespace Redwood.Ast
 
         internal override void Bind(Binder binder)
         {
+            // First, bind in order to set up the types of all lambdas
+            foreach (Definition definition in Definitions)
+            {
+                definition.Bind(new Binder());
+            }
+
+            // TODO: Bind all included modules here
+            
+            // Now that the types of all functions are known, we can bind again
+            // overwriting all variable positions
             foreach (Definition definition in Definitions)
             {
                 definition.Bind(binder);
             }
+
+            // TODO: Bind all included modules again
         }
 
         internal override IEnumerable<Instruction> Compile()
@@ -45,6 +57,8 @@ namespace Redwood.Ast
 
             Compiler.MatchVariables(freeVars, definedVariables);
             return freeVars;
+
+            // TODO: Walk the imports that refer to actual Redwood modules?
         }
     }
 }

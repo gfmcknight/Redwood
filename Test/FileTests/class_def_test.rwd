@@ -1,0 +1,30 @@
+﻿import Test.RAssert;
+
+class TestClass(
+    int paramA,
+    int paramB) 
+{
+
+    let int field = 6;
+    
+    constructor(int value)
+    {
+        paramA = value;
+        paramB = value;
+    }
+}
+
+function<int> testMain(RAssert assert)
+{
+    let TestClass tc = TestClass(1, 2);
+    assert.Equal(1, tc.paramA);
+    assert.Equal(2, tc.paramB);
+    assert.Equal(6, tc.field);
+
+    tc = TestClass(3);
+    assert.Equal(3, tc.paramA);
+    assert.Equal(3, tc.paramB);
+    assert.Equal(6, tc.field);
+
+    return 0;
+}

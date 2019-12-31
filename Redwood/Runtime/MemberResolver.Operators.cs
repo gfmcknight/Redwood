@@ -46,6 +46,7 @@ namespace Redwood.Runtime
             primitiveOperators = new Dictionary<Type, Dictionary<OperatorDescriptor, Lambda>>();
 
             // int operators
+            RedwoodType boolType = RedwoodType.GetForCSharpType(typeof(bool));
             RedwoodType type = RedwoodType.GetForCSharpType(typeof(int));
             RedwoodType[] unaryOperatorsType = new RedwoodType[] { type };
             RedwoodType[] binaryOperatorsType = new RedwoodType[] { type, type };
@@ -133,42 +134,42 @@ namespace Redwood.Runtime
 
             intOperators.Add(
                 new OperatorDescriptor(BinaryOperator.LessThan),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (int)stack[locs[0]] < (int)stack[locs[1]]
                 )
             );
 
             intOperators.Add(
                 new OperatorDescriptor(BinaryOperator.GreaterThan),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (int)stack[locs[0]] > (int)stack[locs[1]]
                 )
             );
 
             intOperators.Add(
                 new OperatorDescriptor(BinaryOperator.LessThanOrEquals),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (int)stack[locs[0]] <= (int)stack[locs[1]]
                 )
             );
 
             intOperators.Add(
                 new OperatorDescriptor(BinaryOperator.GreaterThanOrEquals),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (int)stack[locs[0]] >= (int)stack[locs[1]]
                 )
             );
 
             intOperators.Add(
                 new OperatorDescriptor(BinaryOperator.Equals),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (int)stack[locs[0]] == (int)stack[locs[1]]
                 )
             );
 
             intOperators.Add(
                 new OperatorDescriptor(BinaryOperator.NotEquals),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (int)stack[locs[0]] != (int)stack[locs[1]]
                 )
             );
@@ -285,42 +286,42 @@ namespace Redwood.Runtime
 
             doubleOperators.Add(
                 new OperatorDescriptor(BinaryOperator.LessThan),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (double)stack[locs[0]] < (double)stack[locs[1]]
                 )
             );
 
             doubleOperators.Add(
                 new OperatorDescriptor(BinaryOperator.GreaterThan),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (double)stack[locs[0]] > (double)stack[locs[1]]
                 )
             );
 
             doubleOperators.Add(
                 new OperatorDescriptor(BinaryOperator.LessThanOrEquals),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (double)stack[locs[0]] <= (double)stack[locs[1]]
                 )
             );
 
             doubleOperators.Add(
                 new OperatorDescriptor(BinaryOperator.GreaterThanOrEquals),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (double)stack[locs[0]] >= (double)stack[locs[1]]
                 )
             );
 
             doubleOperators.Add(
                 new OperatorDescriptor(BinaryOperator.Equals),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (double)stack[locs[0]] == (double)stack[locs[1]]
                 )
             );
 
             doubleOperators.Add(
                 new OperatorDescriptor(BinaryOperator.NotEquals),
-                new InPlaceLambda(binaryOperatorsType, type,
+                new InPlaceLambda(binaryOperatorsType, boolType,
                     (object[] stack, int[] locs) => (double)stack[locs[0]] != (double)stack[locs[1]]
                 )
             );

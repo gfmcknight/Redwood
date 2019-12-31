@@ -1,4 +1,5 @@
 ﻿using Redwood.Ast;
+using Redwood.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -219,7 +220,14 @@ namespace Redwood
             List<Definition> definitions = new List<Definition>();
             while (!eof)
             {
-                Definition definition = await ParseDefinition();
+                Definition definition = await ParseClass();
+                if (definition != null)
+                {
+                    definitions.Add(definition);
+                    continue;
+                }
+
+                definition = await ParseDefinition();
                 if (definition == null)
                 {
                     break;
@@ -273,6 +281,87 @@ namespace Redwood
             return new BlockStatement
             {
                 Statements = statements.ToArray()
+            };
+        }
+
+        internal async Task<ClassDefinition> ParseClass()
+        {
+            if (!await MaybeToken("class", true))
+            {
+                return null;
+            }
+
+            if (!await MaybeName())
+            {
+                throw new NotImplementedException();
+            }
+            string name = LastName;
+
+            ParameterDefinition[] defaultParams = null;
+            if (await MaybeToken("(", false))
+            {
+                if (await MaybeToken(")", false))
+                {
+                    defaultParams = new ParameterDefinition[0];
+                }
+                else
+                {
+                    defaultParams = await ParseParameterList();
+                    if (!await MaybeToken(")", false))
+                    {
+                        throw new NotImplementedException();
+                    }
+                }
+            }
+
+            if (!await MaybeToken("{", false))
+            {
+                throw new NotImplementedException();
+            }
+
+            List<FunctionDefinition> constructors = new List<FunctionDefinition>();
+            List<FunctionDefinition> methods = new List<FunctionDefinition>();
+            List<LetDefinition> fields = new List<LetDefinition>();
+
+            while (!eof)
+            {
+                if (await MaybeToken("}", false))
+                {
+                    break;
+                }
+
+                FunctionDefinition function = await ParseConstructorDefinition();
+                if (function != null)
+                {
+                    constructors.Add(function);
+                    continue;
+                }
+
+                function = await ParseFunctionDefinition();
+                if (function != null)
+                {
+                    methods.Add(function);
+                    continue;
+                }
+
+                LetDefinition field = await ParseLetDefinition();
+                if (field != null)
+                {
+                    fields.Add(field);
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+
+            return new ClassDefinition
+            {
+                Name = name,
+                Constructors = constructors.ToArray(),
+                Methods = methods.ToArray(),
+                ParameterFields = defaultParams,
+                InstanceFields =  fields.ToArray()
             };
         }
 
@@ -368,6 +457,50 @@ namespace Redwood
                 Parameters = parameters,
                 Body = functionCode,
                 ReturnType = returnType
+            };
+        }
+
+        public async Task<FunctionDefinition> ParseConstructorDefinition()
+        {
+            if (!await MaybeToken("constructor", true))
+            {
+                return null;
+            }
+
+            if (!await MaybeToken("(", false))
+            {
+                throw new NotImplementedException();
+            }
+
+            ParameterDefinition[] parameters;
+            if (await MaybeToken(")", false))
+            {
+                parameters = new ParameterDefinition[0];
+            }
+            else
+            {
+                parameters = await ParseParameterList();
+                if (parameters == null)
+                {
+                    throw new NotImplementedException();
+                }
+                if (!await MaybeToken(")", false))
+                {
+                    throw new NotImplementedException();
+                }
+            }
+
+            BlockStatement functionCode = await ParseBlock();
+            if (functionCode == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            return new FunctionDefinition
+            {
+                Parameters = parameters,
+                Body = functionCode
+                // TODO: Return type?
             };
         }
 
@@ -653,9 +786,16 @@ namespace Redwood
                     throw new NotImplementedException();
                 }
             }
+            else
+            {
+                leftMost = ParseUnary();
+            }
 
-            
-            if (await MaybeName())
+            if (leftMost != null)
+            {
+
+            }
+            else if (await MaybeName())
             {
                 leftMost = new NameExpression
                 {
@@ -778,6 +918,12 @@ namespace Redwood
             throw new NotImplementedException();
         }
 
+        private Expression ParseUnary()
+        {
+            // TODO
+            return null;
+        }
+
         private async Task SwapBuffers()
         {
             char[] temp = lastBuffer;
@@ -837,8 +983,6 @@ namespace Redwood
                 await Advance();
             }
         }
-
-       
 
         private void Unget(int amount)
         {
@@ -924,7 +1068,11 @@ namespace Redwood
                 return true;
             }
 
-            if (await MaybeToken("\"", false))
+            if (!await MaybeToken("\"", false))
+            {
+                return false;
+            }
+            else
             {
                 StringBuilder sb = new StringBuilder();
                 while (!eof)
@@ -967,10 +1115,10 @@ namespace Redwood
             }
 
             // TODO: Throw!
-            return false;
+            throw new NotImplementedException();
         }
 
-        private bool isFloatingMarker(char c)
+        private bool IsFloatingMarker(char c)
         {
             return c == 'f' || c == 'd' || c == '.';
         }
@@ -983,7 +1131,7 @@ namespace Redwood
                 return true;
             }
 
-            bool validIntChar(char c, bool hex)
+            bool ValidIntChar(char c, bool hex)
             {
                 return currentBuffer[bufferPos] >= '0' && currentBuffer[bufferPos] <= '9' ||
                        hex && currentBuffer[bufferPos] >= 'A' && currentBuffer[bufferPos] <= 'F' ||
@@ -1004,7 +1152,7 @@ namespace Redwood
                 style = NumberStyles.Integer;
             }
 
-            if (!validIntChar(currentBuffer[bufferPos], hex))
+            if (!ValidIntChar(currentBuffer[bufferPos], hex))
             {
                 Unget(hex ? 2 : 0);
                 return false;
@@ -1013,14 +1161,14 @@ namespace Redwood
             StringBuilder sb = new StringBuilder();
             while (!eof)
             {
-                if (validIntChar(currentBuffer[bufferPos], hex))
+                if (ValidIntChar(currentBuffer[bufferPos], hex))
                 {
                     sb.Append(currentBuffer[bufferPos]);
                     await Advance();
                 }
                 else
                 {
-                    if (isFloatingMarker(currentBuffer[bufferPos]))
+                    if (IsFloatingMarker(currentBuffer[bufferPos]))
                     {
                         Unget(sb.Length + (hex ? 2 : 0));
                         return false;
@@ -1051,7 +1199,7 @@ namespace Redwood
 
             while (!eof)
             {
-                if (!char.IsDigit(currentBuffer[bufferPos]) && !isFloatingMarker(currentBuffer[bufferPos]))
+                if (!char.IsDigit(currentBuffer[bufferPos]) && !IsFloatingMarker(currentBuffer[bufferPos]))
                 {
                     break;
                 }

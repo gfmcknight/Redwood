@@ -23,7 +23,14 @@ namespace Redwood.Ast
 
         public override object EvaluateConstant()
         {
-            return Value;
+            if (Value < int.MaxValue && Value > int.MinValue)
+            {
+                return (int)Value;
+            }
+            else
+            {
+                return Value;
+            }
         }
 
         internal override void Bind(Binder binder)
@@ -53,6 +60,11 @@ namespace Redwood.Ast
         internal override IEnumerable<NameExpression> Walk()
         {
             return new NameExpression[0];
+        }
+
+        internal override IEnumerable<Instruction> CompileLVal()
+        {
+            throw new NotImplementedException();
         }
     }
 }

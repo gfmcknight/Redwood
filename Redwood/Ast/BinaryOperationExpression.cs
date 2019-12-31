@@ -43,6 +43,17 @@ namespace Redwood.Ast
 
         internal override IEnumerable<Instruction> Compile()
         {
+            if (SpecialHandling(Operator))
+            {
+                switch (Operator)
+                {
+                    case BinaryOperator.Assign:
+                        return CompileAssign();
+                    default:
+                        break;
+                }
+            }
+
             List<Instruction> instructions = new List<Instruction>();
             instructions.AddRange(Left.Compile());
             instructions.Add(Compiler.CompileVariableAssign(TemporaryVariables[0]));
@@ -94,9 +105,25 @@ namespace Redwood.Ast
                     })
                 );
             }
-            
+
 
             return instructions;
+        }
+
+        private IEnumerable<Instruction> CompileAssign()
+        {
+            List<Instruction> instructions = new List<Instruction>();
+            if (Left is NameExpression ne)
+            {
+                instructions.AddRange(Right.Compile());
+                instructions.Add(Compiler.CompileVariableAssign(ne.Variable));
+            }
+            else
+            {
+                // TODO: setting values on members
+                throw new NotImplementedException();
+            }
+            return instructions.ToArray();
         }
 
         internal override IEnumerable<NameExpression> Walk()
@@ -105,7 +132,18 @@ namespace Redwood.Ast
             TemporaryVariables = new List<Variable>();
             if (ReflectedOperatorName == null)
             {
-                throw new NotImplementedException();
+                switch (Operator)
+                {
+                    case BinaryOperator.Assign:
+                        if (Left is NameExpression ne)
+                        {
+                            ne.InLVal = true;
+                        }
+                        // TODO?
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
             }
             else
             {
@@ -128,14 +166,18 @@ namespace Redwood.Ast
         {
             binder.Bookmark();
 
-            binder.BindVariable(TemporaryVariables[0]);
-            binder.BindVariable(TemporaryVariables[1]);
+            foreach (Variable variable in TemporaryVariables)
+            {
+                binder.BindVariable(variable);
+            }
+            
             Left.Bind(binder);
             Right.Bind(binder);
-            
+
             binder.Checkout();
 
-            if (Left.GetKnownType() != null && Right.GetKnownType() != null)
+            if (!SpecialHandling(Operator) &&
+                Left.GetKnownType() != null && Right.GetKnownType() != null)
             {
                 // Resolve the static method
                 MemberResolver.TryResolveOperator(
@@ -158,6 +200,19 @@ namespace Redwood.Ast
         public override RedwoodType GetKnownType()
         {
             return ResolvedOperator?.ReturnType;
+        }
+
+        internal override IEnumerable<Instruction> CompileLVal()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static bool SpecialHandling(BinaryOperator op)
+        {
+            return op == BinaryOperator.LogicalAnd ||
+                   op == BinaryOperator.LogicalOr ||
+                   op == BinaryOperator.Coalesce  ||
+                   op == BinaryOperator.Assign;
         }
     }
 }

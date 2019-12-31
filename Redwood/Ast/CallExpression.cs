@@ -60,7 +60,7 @@ namespace Redwood.Ast
             }
             
             // If we have fully resolved types (ie. all argument types are known
-            // and so is the 
+            // and so is the callee type) we definitely know the return type
             FullyResolved = fullyResolvedTypes;
             // We have two options for determining an exact type, either:
             // 1) The method is fully resolved. One lambda type will come out of
@@ -83,7 +83,6 @@ namespace Redwood.Ast
             }
             else
             {
-                // TODO: Resolve based on the known types of arguments?
                 MethodInfo[] infos;
                 bool methodExists = MemberResolver.TryResolveMethod(
                     null,
@@ -150,6 +149,11 @@ namespace Redwood.Ast
                 }
                 else if (knownType.CSharpType == typeof(ExternalLambda))
                 {
+                    instructions.Add(new ExternalCallInstruction(argumentLocations));
+                }
+                else if (knownType.CSharpType == typeof(RedwoodType))
+                {
+                    instructions.Add(new LookupExternalMemberLambdaInstruction("Constructor", knownType));
                     instructions.Add(new ExternalCallInstruction(argumentLocations));
                 }
             }
@@ -227,6 +231,11 @@ namespace Redwood.Ast
 
             // The lambda type is Lambda<ParamTypes..., ReturnType>
             return signature[signature.Length - 1];
+        }
+
+        internal override IEnumerable<Instruction> CompileLVal()
+        {
+            throw new NotImplementedException();
         }
     }
 }

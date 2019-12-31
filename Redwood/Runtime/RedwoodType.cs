@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Redwood.Ast;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -20,13 +21,15 @@ namespace Redwood.Runtime
         internal Dictionary<int, InternalLambdaDescription[]> overloadsMap;
         // Type -> slot
         internal Dictionary<RedwoodType, int> implicitConversionMap;
-        internal int numSlots; 
+        internal RedwoodType[] slotTypes;
+        internal int numSlots;
 
         public RedwoodType BaseType { get; private set; }
         public Type CSharpType { get; private set; }
         // TODO: Make this immutable?
         public RedwoodType[] GenericArguments { get; private set; }
         public RedwoodType NonGenericType { get; private set; }
+        public Lambda Constructor { get; internal set; }
 
         public static RedwoodType GetForCSharpType(Type type)
         {
@@ -85,6 +88,12 @@ namespace Redwood.Runtime
 
         public bool IsAssignableFrom(object obj)
         {
+            // All objects can be null
+            if (obj == null)
+            {
+                return true;
+            }
+
             if (obj is RedwoodObject rwo)
             {
                 return IsAssignableFrom(rwo.Type);
@@ -251,6 +260,13 @@ namespace Redwood.Runtime
             {
                 BaseType = GetForCSharpType(cSharpType.BaseType);
             }
+        }
+
+        internal static RedwoodType Make(ClassDefinition @class)
+        {
+            RedwoodType type = new RedwoodType();
+            // TODO: Number of slots?
+            return type;
         }
     }
 }

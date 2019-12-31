@@ -21,5 +21,7 @@ namespace Redwood.Ast
         {
             throw new NotImplementedException();
         }
+
+        internal abstract IEnumerable<Instruction> CompileLVal();
     }
 }
