@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Test
 {
-    public class LambdaTest
+    public class AstTest
     {
         [Fact]
         public void CanReturnSimpleValue()

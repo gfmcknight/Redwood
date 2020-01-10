@@ -104,10 +104,10 @@ namespace Redwood
             // Comparison
             binaryOpParsers.Add(
                 new BinaryOpGroupParser(
-                    new BinaryOpSpec("<", BinaryOperator.LessThan, false),
-                    new BinaryOpSpec(">", BinaryOperator.GreaterThan, false),
                     new BinaryOpSpec("<=", BinaryOperator.LessThanOrEquals, false),
-                    new BinaryOpSpec(">=", BinaryOperator.GreaterThanOrEquals, false)
+                    new BinaryOpSpec(">=", BinaryOperator.GreaterThanOrEquals, false),
+                    new BinaryOpSpec("<", BinaryOperator.LessThan, false),
+                    new BinaryOpSpec(">", BinaryOperator.GreaterThan, false)
                 )
             );
 
@@ -773,9 +773,46 @@ namespace Redwood
         {
             Expression leftMost = null;
 
-            // Parse a parenthetical expression
-            if (await MaybeToken("(", false))
+            if (await MaybeToken("statictype", true))
             {
+                if (!await MaybeToken("(", false))
+                {
+                    throw new NotImplementedException();
+                }
+                leftMost = await ParseExpression();
+                if (leftMost == null)
+                {
+                    throw new NotImplementedException();
+                }
+                if (!await MaybeToken(")", false))
+                {
+                    throw new NotImplementedException();
+                }
+
+                leftMost = new StaticTypeExpression
+                {
+                    Expression = leftMost
+                };
+            }
+            else if (await MaybeToken("type", true))
+            {
+                if (!await MaybeToken("(", false))
+                {
+                    throw new NotImplementedException();
+                }
+                leftMost = await ParseType();
+                if (leftMost == null)
+                {
+                    throw new NotImplementedException();
+                }
+                if (!await MaybeToken(")", false))
+                {
+                    throw new NotImplementedException();
+                }
+            }
+            else if (await MaybeToken("(", false))
+            {
+                // Parse a parenthetical expression
                 leftMost = await ParseExpression();
                 if (leftMost == null)
                 {
@@ -794,6 +831,26 @@ namespace Redwood
             if (leftMost != null)
             {
 
+            }
+            else if (await MaybeToken("null", true))
+            {
+                // In theory, null cannot be dotwalked, called, etc.
+                // but that might REALLY mess up our parsing
+                leftMost = new NullExpression { };
+            }
+            else if (await MaybeToken("true", true))
+            {
+                leftMost = new BoolConstant
+                {
+                    Value = true
+                };
+            }
+            else if (await MaybeToken("false", true))
+            {
+                leftMost = new BoolConstant
+                {
+                    Value = false
+                };
             }
             else if (await MaybeName())
             {
@@ -957,11 +1014,11 @@ namespace Redwood
             }
 
             bufferPos++;
-            if (bufferPos > BufferSize)
+            if (bufferPos >= BufferSize)
             {
                 await SwapBuffers();
             }
-            if (bufferPos > bufferEnd)
+            if (bufferPos >= bufferEnd)
             {
                 eof = true;
             }
@@ -974,7 +1031,7 @@ namespace Redwood
                 await Advance();
             }
 
-            while (char.IsWhiteSpace(currentBuffer[bufferPos]) && !eof)
+            while (!eof && char.IsWhiteSpace(currentBuffer[bufferPos]))
             {
                 if (currentBuffer[bufferPos] == '\n')
                 {

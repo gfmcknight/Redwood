@@ -7,19 +7,22 @@ using System.Text;
 
 namespace Redwood.Ast
 {
-    public class TypeSyntax : Statement
+    public class TypeSyntax : Expression
     {
         public NameExpression TypeName { get; set; }
         public TypeSyntax[] GenericInnerTypes { get; set; }
 
         internal override void Bind(Binder binder)
         {
-            throw new NotImplementedException();
+            return;
         }
 
         internal override IEnumerable<Instruction> Compile()
         {
-            throw new NotImplementedException();
+            return new Instruction[]
+            {
+                new LoadConstantInstruction(GetIndicatedType())
+            };
         }
 
         internal override IEnumerable<NameExpression> Walk()
@@ -38,7 +41,11 @@ namespace Redwood.Ast
             {
                 return type;
             }
-            RedwoodType knownType = TypeName.GetKnownType();
+            RedwoodType knownType = 
+                TypeName.Constant ? 
+                TypeName.EvaluateConstant() as RedwoodType :
+                null;
+
             if (GenericInnerTypes == null)
             {
                 return knownType;
@@ -68,8 +75,18 @@ namespace Redwood.Ast
                         return genericType.CSharpType;
                     }).ToArray()
                 );
+                throw new NotImplementedException();
             }
-            return TypeName.GetKnownType();
+        }
+
+        internal override IEnumerable<Instruction> CompileLVal()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override RedwoodType GetKnownType()
+        {
+            return RedwoodType.GetForCSharpType(typeof(RedwoodType));
         }
     }
 }

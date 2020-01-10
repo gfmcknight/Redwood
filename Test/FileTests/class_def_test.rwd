@@ -26,5 +26,7 @@ function<int> testMain(RAssert assert)
     assert.Equal(3, tc.paramB);
     assert.Equal(6, tc.field);
 
+    assert.Equal(TestClass, statictype(tc));
+
     return 0;
 }

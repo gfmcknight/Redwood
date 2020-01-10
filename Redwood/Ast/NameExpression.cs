@@ -8,10 +8,25 @@ namespace Redwood.Ast
 {
     public class NameExpression : Expression
     {
+        public override bool Constant
+        {
+            get
+            {
+                return Variable == null ?
+                    false : // TODO: what about the expression int
+                    Variable.DefinedConstant && !Variable.Mutated;
+            }
+        }
+
         public string Name { get; set; }
         internal bool RequiresClosure { get; set; }
         internal bool InLVal { get; set; }
         internal Variable Variable { get; set; }
+
+        public override object EvaluateConstant()
+        {
+            return Variable.ConstantValue;
+        }
 
         internal override void Bind(Binder binder)
         {

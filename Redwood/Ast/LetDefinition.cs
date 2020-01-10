@@ -40,12 +40,19 @@ namespace Redwood.Ast
         internal override IEnumerable<NameExpression> Walk()
         {
             base.Walk(); // TODO: will we ever need the result of this?
-            DeclaredVariable.DefinedConstant = Initializer.Constant;
-            if (Initializer.Constant)
+            List<NameExpression> freeVars = new List<NameExpression>();
+            freeVars.AddRange(Type.Walk());
+
+            if (Initializer != null)
             {
-                DeclaredVariable.ConstantValue = Initializer.EvaluateConstant();
+                DeclaredVariable.DefinedConstant = Initializer.Constant;
+                if (Initializer.Constant)
+                {
+                    DeclaredVariable.ConstantValue = Initializer.EvaluateConstant();
+                }
+                freeVars.AddRange(Initializer.Walk());
             }
-            return Initializer?.Walk() ?? new NameExpression[0];
+            return freeVars;
         }
     }
 }

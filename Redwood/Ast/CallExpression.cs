@@ -78,8 +78,9 @@ namespace Redwood.Ast
             }
             else if (Callee.GetKnownType().CSharpType == null)
             {
-                // TODO
-                throw new NotImplementedException();
+                LambdaType = Callee.GetKnownType().slotTypes[
+                    Callee.GetKnownType().slotMap[FunctionName.Name]
+                ];
             }
             else
             {
@@ -226,6 +227,12 @@ namespace Redwood.Ast
             // Don't know the type of the lambda's arguments/return?
             if (signature == null || signature.Length == 0)
             {
+                // We do know the type on a constructor call
+                if (FunctionName.GetKnownType()?.CSharpType == typeof(RedwoodType) &&
+                    FunctionName.Constant)
+                {
+                    return FunctionName.EvaluateConstant() as RedwoodType;
+                }
                 throw new NotImplementedException();
             }
 

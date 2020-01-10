@@ -330,6 +330,22 @@ namespace Redwood.Runtime
 
             Dictionary<OperatorDescriptor, Lambda> boolOperators =
                 new Dictionary<OperatorDescriptor, Lambda>();
+            binaryOperatorsType = new RedwoodType[] { boolType, boolType };
+
+            boolOperators.Add(
+                new OperatorDescriptor(BinaryOperator.Equals),
+                new InPlaceLambda(binaryOperatorsType, boolType,
+                    (object[] stack, int[] locs) => (bool)stack[locs[0]] == (bool)stack[locs[1]]
+                )
+            );
+
+            boolOperators.Add(
+                new OperatorDescriptor(BinaryOperator.NotEquals),
+                new InPlaceLambda(binaryOperatorsType, boolType,
+                    (object[] stack, int[] locs) => (bool)stack[locs[0]] != (bool)stack[locs[1]]
+                )
+            );
+
             primitiveOperators[typeof(bool)] = boolOperators;
         }
     }

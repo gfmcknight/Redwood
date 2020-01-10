@@ -15,6 +15,7 @@ namespace Test
         [Theory]
         [InlineData("simple_test.rwd")]
         [InlineData("class_def_test.rwd")]
+        [InlineData("static_type_test.rwd")]
         public async void RunTestFromFile(string filename)
         {
             Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());
