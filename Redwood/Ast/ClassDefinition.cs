@@ -20,6 +20,7 @@ namespace Redwood.Ast
         internal List<Variable> TempArgumentVariables { get; set; }
         internal List<Instruction> ConstructorBase { get; set; }
         internal int ConstructorStackSize { get; set; }
+        internal List<OverloadGroup> Overloads { get; set; }
 
         internal override void Bind(Binder binder)
         {
@@ -60,18 +61,34 @@ namespace Redwood.Ast
                 method.Bind(binder);
             }
 
+            foreach (OverloadGroup overload in Overloads)
+            {
+                overload.DoBind(binder);
+                
+                RedwoodType[][] signatures = overload
+                    .definitions
+                    .Select(def =>
+                        def.Parameters.Select(param => param.Type.GetIndicatedType()).ToArray()
+                    )
+                    .ToArray();
+
+                int[] slots = overload
+                    .definitions
+                    .Select(def => def.DeclaredVariable.Location)
+                    .ToArray();
+
+                Type.overloadsMap[overload.variable.Location] =
+                    new Tuple<RedwoodType[][], int[]>(signatures, slots);
+            }
+
 
             // Since our class is just a closure
             Type.numSlots = binder.GetClosureSize();
-            if (Type.numSlots != MemberVariables.Count)
-            {
-                // TODO: by definition, this should never happen
-                throw new NotImplementedException();
-            }
+
 
             Type.slotMap = new Dictionary<string, int>();
             Type.slotTypes = new RedwoodType[Type.numSlots];
-            for (int i = 0; i < Type.numSlots; i++)
+            for (int i = 0; i < MemberVariables.Count; i++)
             {
                 Variable var = MemberVariables[i];
                 int slot = var.Location;
@@ -98,6 +115,14 @@ namespace Redwood.Ast
                 foreach (FunctionDefinition method in Methods)
                 {
                     ConstructorBase.AddRange(method.Compile());
+                }
+
+                foreach (OverloadGroup method in Overloads)
+                {
+                    if (!method.IsSingleMethod())
+                    {
+                        ConstructorBase.AddRange(method.Compile());
+                    }
                 }
             }
             instructions.AddRange(ConstructorBase);
@@ -210,8 +235,12 @@ namespace Redwood.Ast
             foreach (FunctionDefinition method in Methods)
             {
                 freeVars.AddRange(method.Walk());
-                declaredVars.Add(method.DeclaredVariable);
+                // Closure these variables even though they aren't in the
+                // object's map so that they can be directly accessed
+                method.DeclaredVariable.Closured = true;
             }
+            Overloads = Compiler.GenerateOverloads(Methods.ToList());
+            declaredVars.AddRange(Overloads.Select(o => o.variable));
 
             MemberVariables = declaredVars;
             // Make sure that all of our variables end up in the closure that

@@ -11,10 +11,18 @@ namespace Redwood.Ast
     {
         public Statement[] Statements { get; set; }
 
-        internal IEnumerable<Variable> DeclaredVariables { get; set; }
+        internal List<Variable> DeclaredVariables { get; set; }
+
+        internal List<OverloadGroup> Overloads { get; set; }
+
 
         internal override void Bind(Binder binder)
         {
+            foreach (OverloadGroup overload in Overloads)
+            {
+                overload.DoBind(binder);
+            }
+
             foreach (Statement statement in Statements)
             {
                 statement.Bind(binder);
@@ -24,8 +32,20 @@ namespace Redwood.Ast
         internal override IEnumerable<Instruction> Compile()
         {
             List<Instruction> instructions = new List<Instruction>();
+
+            foreach (OverloadGroup group in Overloads)
+            {
+                instructions.AddRange(group.Compile());
+            }
+
             foreach (Statement statement in Statements)
             {
+                // Special handling of function definitions so that
+                // we can deduplicate overloads
+                if (statement is FunctionDefinition)
+                {
+                    continue;
+                }
                 instructions.AddRange(statement.Compile());
             }
             return instructions;
@@ -39,10 +59,21 @@ namespace Redwood.Ast
                 freeVariables.AddRange(statement.Walk());
             }
 
+
             // The Walk() call will have populated all variables in LetStatements
+            // For function definitions, we need a special handling for overloads
             DeclaredVariables = Statements
-                .Where(statement => statement is Definition)
-                .Select(statement => (statement as Definition).DeclaredVariable);
+                .Where(statement => statement is Definition
+                       && !(statement is FunctionDefinition))
+                .Select(statement => (statement as Definition).DeclaredVariable)
+                .ToList();
+
+            List<FunctionDefinition> functions = Statements
+                .Where(statement => statement is FunctionDefinition)
+                .Select(statement => statement as FunctionDefinition)
+                .ToList();
+            Overloads = Compiler.GenerateOverloads(functions);
+            DeclaredVariables.AddRange(Overloads.Select(o => o.variable));
 
             Compiler.MatchVariables(freeVariables, DeclaredVariables);
 

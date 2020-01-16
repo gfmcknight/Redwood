@@ -148,7 +148,8 @@ namespace Redwood.Ast
                 {
                     instructions.Add(new InternalCallInstruction(argumentLocations));
                 }
-                else if (knownType.CSharpType == typeof(ExternalLambda))
+                else if (knownType.CSharpType == typeof(ExternalLambda) ||
+                         knownType.CSharpType == typeof(LambdaGroup))
                 {
                     instructions.Add(new ExternalCallInstruction(argumentLocations));
                 }
@@ -156,6 +157,10 @@ namespace Redwood.Ast
                 {
                     instructions.Add(new LookupExternalMemberLambdaInstruction("Constructor", knownType));
                     instructions.Add(new ExternalCallInstruction(argumentLocations));
+                }
+                else
+                {
+                    throw new NotImplementedException();
                 }
             }
             else
@@ -233,7 +238,8 @@ namespace Redwood.Ast
                 {
                     return FunctionName.EvaluateConstant() as RedwoodType;
                 }
-                throw new NotImplementedException();
+                // TODO: check for an overload
+                return null;
             }
 
             // The lambda type is Lambda<ParamTypes..., ReturnType>

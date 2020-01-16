@@ -37,11 +37,6 @@ namespace Redwood.Ast
 
         internal override IEnumerable<Instruction> Compile()
         {
-            if (ClassMethod)
-            {
-                throw new NotImplementedException("Methods in classes");
-            }
-
             return new Instruction[]
             {
                 new BuildInternalLambdaInstruction(CompileInner()),

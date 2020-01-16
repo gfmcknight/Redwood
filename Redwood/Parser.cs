@@ -340,6 +340,7 @@ namespace Redwood
                 function = await ParseFunctionDefinition();
                 if (function != null)
                 {
+                    function.ClassMethod = true;
                     methods.Add(function);
                     continue;
                 }

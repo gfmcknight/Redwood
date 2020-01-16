@@ -60,7 +60,7 @@ namespace Redwood.Ast
             freeVars.AddRange(PathTrue.Walk());
             if (ElseStatement != null)
             {
-                freeVars.AddRange(Condition.Walk());
+                freeVars.AddRange(ElseStatement.Walk());
             }
             return freeVars;
         }

@@ -18,7 +18,7 @@ namespace Redwood.Runtime
         // Name of member/method -> slot number
         internal Dictionary<string, int> slotMap;
         // Slot number -> overloads
-        internal Dictionary<int, InternalLambdaDescription[]> overloadsMap;
+        internal Dictionary<int, Tuple<RedwoodType[][], int[]>> overloadsMap;
         // Type -> slot
         internal Dictionary<RedwoodType, int> implicitConversionMap;
         internal RedwoodType[] slotTypes;
@@ -185,21 +185,16 @@ namespace Redwood.Runtime
         internal int GetSlotNumberForOverload(string functionName, RedwoodType[] argTypes)
         {
             int baseSlot = slotMap[functionName];
-            InternalLambdaDescription[] overloads = overloadsMap[baseSlot];
-            RedwoodType[][] overloadArgTypes = new RedwoodType[overloads.Length][];
-            for (int i = 0; i < overloads.Length; i++)
-            {
-                overloadArgTypes[i] = overloads[i].argTypes;
-            }
+            RedwoodType[][] overloadArgTypes = overloadsMap[baseSlot].Item1;
 
             bool found = RuntimeUtil.TrySelectOverload(
                 argTypes,
                 overloadArgTypes,
-                out int actualSlot);
+                out int index);
 
             if (found)
             {
-                return actualSlot;
+                return overloadsMap[baseSlot].Item2[index];
             }
             else
             {
@@ -240,6 +235,7 @@ namespace Redwood.Runtime
 
         private RedwoodType()
         {
+            overloadsMap = new Dictionary<int, Tuple<RedwoodType[][], int[]>>();
             // TODO: RedwoodType for void only?
         }
 

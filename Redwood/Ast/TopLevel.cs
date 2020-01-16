@@ -1,6 +1,7 @@
 ﻿using Redwood.Instructions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Redwood.Ast
@@ -9,8 +10,14 @@ namespace Redwood.Ast
     {
         public Definition[] Definitions { get; set; }
 
+        internal List<OverloadGroup> Overloads { get; set; }
+
         internal override void Bind(Binder binder)
         {
+            foreach (OverloadGroup overload in Overloads)
+            {
+                overload.DoBind(new Binder());
+            }
             // First, bind in order to set up the types of all lambdas
             foreach (Definition definition in Definitions)
             {
@@ -25,15 +32,28 @@ namespace Redwood.Ast
             {
                 definition.Bind(binder);
             }
-
+            foreach (OverloadGroup overload in Overloads)
+            {
+                overload.DoBind(binder);
+            }
             // TODO: Bind all included modules again
         }
 
         internal override IEnumerable<Instruction> Compile()
         {
             List<Instruction> instructions = new List<Instruction>();
+
+            foreach (OverloadGroup overload in Overloads)
+            {
+                instructions.AddRange(overload.Compile());
+            }
+
             foreach (Definition definition in Definitions)
             {
+                if (definition is FunctionDefinition)
+                {
+                    continue;
+                }
                 instructions.AddRange(definition.Compile());
             }
             instructions.Add(new ReturnInstruction());
@@ -51,8 +71,22 @@ namespace Redwood.Ast
             List<Variable> definedVariables = new List<Variable>();
             foreach (Definition definition in Definitions)
             {
-                definition.DeclaredVariable.Global = true;
-                definedVariables.Add(definition.DeclaredVariable);
+                if (!(definition is FunctionDefinition))
+                {
+                    definedVariables.Add(definition.DeclaredVariable);
+                }
+            }
+
+            List<FunctionDefinition> functions = Definitions
+                .Where(statement => statement is FunctionDefinition)
+                .Select(statement => statement as FunctionDefinition)
+                .ToList();
+            Overloads = Compiler.GenerateOverloads(functions);
+            definedVariables.AddRange(Overloads.Select(o => o.variable));
+
+            foreach (Variable variable in definedVariables)
+            {
+                variable.Global = true;
             }
 
             Compiler.MatchVariables(freeVars, definedVariables);

@@ -104,7 +104,8 @@ namespace Redwood.Runtime
                         // Once we don't have a known type, quit
                         break;
                     }
-                    else if (overload[j].IsAssignableFrom(args[j]))
+                    else if (overload[j] == null || 
+                             overload[j].IsAssignableFrom(args[j]))
                     {
                         currentMatch[j] = 2 * args[j].AncestorCount(overload[j]);
                     }
@@ -151,6 +152,7 @@ namespace Redwood.Runtime
                 // all of the others
                 if (isBestMatch && candidate[i])
                 {
+                    bestMatchIndex = i;
                     for (int j = i - 1; j >= 0; j--)
                     {
                         candidate[j] = false;
@@ -227,7 +229,7 @@ namespace Redwood.Runtime
         internal static bool TrySelectOverload(RedwoodType[] args, RedwoodType[][] overloads, out int index)
         {
 
-            bool[] candidate = new bool[args.Length];
+            bool[] candidate = new bool[overloads.Length];
             SelectBestOverloads(args, overloads, candidate);
             for (int i = 0; i < candidate.Length; i++)
             {

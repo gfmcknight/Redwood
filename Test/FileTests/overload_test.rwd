@@ -1,0 +1,86 @@
+﻿import Test.RAssert;
+
+function<int> f() { return 1; }
+function<int> f(? a) { return 2; }
+function<int> f(int a) { return 3; }
+function<int> f(string a) { return 4; }
+function<int> f(bool a) { return 5; }
+function<int> f(int a, ? b) { return 6; }
+function<int> f(int a, string b) { return 7; }
+function<int> f(? a, int b) { return 8; }
+
+class TestClass()
+{
+    function<int> f() { return 21; }
+    function<int> f(? a) { return 22; }
+    function<int> f(int a) { return 23; }
+    function<int> f(string a) { return 24; }
+    function<int> f(bool a) { return 25; }
+    function<int> f(int a, ? b) { return 26; }
+    function<int> f(int a, string b) { return 27; }
+    function<int> f(? a, int b) { return 28; }
+
+    function<int> testInClassScope(RAssert assert)
+    {
+        assert.Equal(21, f());
+        assert.Equal(22, f(assert));
+        assert.Equal(23, f(5));
+        assert.Equal(24, f("5"));
+        assert.Equal(25, f(true));
+        assert.Equal(26, f(3, 3));
+        assert.Equal(27, f(3, "5"));
+        assert.Equal(28, f("5", 3));
+
+        return 0;
+    }
+}
+
+function<int> testInBlockScope(RAssert assert)
+{
+    function<int> f() { return 11; }
+    function<int> f(? a) { return 12; }
+    function<int> f(int a) { return 13; }
+    function<int> f(string a) { return 14; }
+    function<int> f(bool a) { return 15; }
+    function<int> f(int a, ? b) { return 16; }
+    function<int> f(int a, string b) { return 17; }
+    function<int> f(? a, int b) { return 18; }
+
+    assert.Equal(11, f());
+    assert.Equal(12, f(assert));
+    assert.Equal(13, f(5));
+    assert.Equal(14, f("5"));
+    assert.Equal(15, f(true));
+    assert.Equal(16, f(3, 3));
+    assert.Equal(17, f(3, "5"));
+    assert.Equal(18, f("5", 3));
+
+    return 0;
+}
+
+function<int> testMain(RAssert assert)
+{
+    assert.Equal(1, f());
+    assert.Equal(2, f(assert));
+    assert.Equal(3, f(5));
+    assert.Equal(4, f("5"));
+    assert.Equal(5, f(true));
+    assert.Equal(6, f(3, 3));
+    assert.Equal(7, f(3, "5"));
+    assert.Equal(8, f("5", 3));
+
+    testInBlockScope(assert);
+    
+    let TestClass tc = TestClass();
+    tc.testInClassScope(assert);
+    assert.Equal(21, tc.f());
+    assert.Equal(22, tc.f(assert));
+    assert.Equal(23, tc.f(5));
+    assert.Equal(24, tc.f("5"));
+    assert.Equal(25, tc.f(true));
+    assert.Equal(26, tc.f(3, 3));
+    assert.Equal(27, tc.f(3, "5"));
+    assert.Equal(28, tc.f("5", 3));
+    
+    return 0;
+}

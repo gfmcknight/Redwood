@@ -92,6 +92,52 @@ namespace Redwood
         }
     }
 
+    internal class OverloadGroup
+    {
+        internal string name;
+        internal List<FunctionDefinition> definitions;
+        internal Variable variable;
+
+        internal OverloadGroup(List<FunctionDefinition> definitions, Variable variable)
+        {
+            name = definitions[0].Name;
+            this.definitions = definitions;
+            this.variable = variable;
+        }
+
+        internal bool IsSingleMethod()
+        {
+            return definitions.Count == 1;
+        }
+
+        internal IEnumerable<Instruction> Compile()
+        {
+            if (definitions.Count == 1)
+            {
+                return definitions[0].Compile();
+            }
+
+            List<Instruction> instructions = new List<Instruction>();
+            InternalLambdaDescription[] overloadDescriptions = definitions
+                    .Select(function => function.CompileInner())
+                    .ToArray();
+
+            instructions.Add(new BuildInternalLambdasInstruction(overloadDescriptions));
+            instructions.Add(Compiler.CompileVariableAssign(variable));
+
+            return instructions;
+        }
+
+        internal void DoBind(Binder binder)
+        {
+            // Don't double-bind any non-overloaded methods
+            if (definitions.Count > 1)
+            {
+                binder.BindVariable(variable);
+            }
+        }
+    }
+
     public static class Compiler
     {
         internal static List<Assembly> assemblies = new List<Assembly>();
@@ -132,6 +178,43 @@ namespace Redwood
             }
         }
 
+        internal static List<OverloadGroup> GenerateOverloads(
+            List<FunctionDefinition> functions)
+        {
+
+            Dictionary<string, List<FunctionDefinition>> functionsByName =
+                new Dictionary<string, List<FunctionDefinition>>();
+
+            foreach (FunctionDefinition function in functions)
+            {
+                if (functionsByName.ContainsKey(function.Name))
+                {
+                    functionsByName[function.Name].Add(function);
+                }
+                else
+                {
+                    functionsByName.Add(function.Name, new List<FunctionDefinition>(
+                        new FunctionDefinition[] { function })
+                    );
+                }
+            }
+
+            List<OverloadGroup> overloads = new List<OverloadGroup>();
+            foreach (List<FunctionDefinition> overload in functionsByName.Values)
+            {
+                // TODO: make the LambdaGroup a 
+                Variable variable = overload.Count == 1 ?
+                    overload[0].DeclaredVariable :
+                    new Variable
+                    {
+                        Name = overload[0].Name,
+                        KnownType = RedwoodType.GetForCSharpType(typeof(LambdaGroup))
+                    };
+                overloads.Add(new OverloadGroup(overload, variable));
+            }
+            return overloads;
+        }
+
         internal static Instruction CompileVariableLookup(Variable variable)
         {
             if (variable.DefinedConstant && !variable.Mutated)
@@ -167,6 +250,7 @@ namespace Redwood
                 return new AssignLocalInstruction(variable.Location);
             }
         }
+
 
         public static GlobalContext CompileModule(TopLevel toplevel)
         {
