@@ -1,0 +1,21 @@
+﻿import module_test.callback;
+
+class TestClass(
+    int paramA,
+    int paramB) 
+{
+
+    let int field = 6;
+    
+    constructor(int value)
+    {
+        paramA = value;
+        paramB = value;
+    }
+}
+
+function<int> callCallback(TestClass tc)
+{
+    return callback(tc);
+}
+

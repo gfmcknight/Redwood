@@ -17,13 +17,20 @@ namespace Test
         [InlineData("class_def_test.rwd")]
         [InlineData("static_type_test.rwd")]
         [InlineData("overload_test.rwd")]
+        [InlineData("module_test.rwd")]
         public async void RunTestFromFile(string filename)
         {
             Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());
 
             Parser parser = new Parser(new StreamReader("FileTests/" + filename));
-            TopLevel top = await parser.ParseModule();
-            GlobalContext context = Compiler.CompileModule(top);
+            TopLevel top = await parser.ParseModule(
+                Path.GetFileNameWithoutExtension(filename)
+            );
+
+            GlobalContext context = await Compiler.CompileModule(
+                top,
+                new DirectoryResourceProvider("FileTests/")
+            );
             
             Lambda lambda = context.LookupVariable("testMain") as Lambda;
             Assert.NotNull(lambda);

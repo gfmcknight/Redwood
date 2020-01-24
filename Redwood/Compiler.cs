@@ -3,8 +3,10 @@ using Redwood.Instructions;
 using Redwood.Runtime;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Redwood
 {
@@ -251,37 +253,141 @@ namespace Redwood
             }
         }
 
-
-        public static GlobalContext CompileModule(TopLevel toplevel)
+        private class ImportDetails
         {
-            IEnumerable<NameExpression> freeVars = toplevel.Walk();
-            if (freeVars.Count() > 0)
+            public string From { get; set; }
+            public string To { get; set; }
+            public string Name { get; set; }
+            public Variable Variable { 
+                get { return NameExpression.Variable; }
+                set { NameExpression.Variable = value; } }
+            public NameExpression NameExpression { get; set; }
+
+            public ImportDetails(string module, NameExpression import)
             {
-                throw new NotImplementedException();
+                To = module;
+                int dotIndex = import.Name.LastIndexOf('.');
+                From = import.Name.Substring(0, dotIndex);
+                Name = import.Name.Substring(dotIndex + 1);
+                NameExpression = import;
+            }
+        }
+
+        public static async Task<GlobalContext> CompileModule(
+            TopLevel toplevel,
+            IResourceProvider resources)
+        {
+            // We may have some 
+            Dictionary<string, TopLevel> modules = new Dictionary<string, TopLevel>();
+            modules[toplevel.ModuleName] = toplevel;
+
+            List<ImportDetails> imports = toplevel
+                .Walk()
+                .Select((NameExpression ne) => new ImportDetails(toplevel.ModuleName, ne))
+                .ToList();
+
+            for (int i = 0; i < imports.Count; i++)
+            {
+                // Allow people to compile modules standalone without a
+                // compiler, but don't let them compile if there are
+                // unresolved modules
+                if (resources == null)
+                {
+                    throw new NotImplementedException();
+                }
+
+                // If we haven't already got the module, then we
+                // will have to go parse it ourselves
+                if (!modules.ContainsKey(imports[i].From))
+                {
+                    // TODO: Other ways of caching modules?
+                    if (!resources.TryGetResource(imports[i].From, out Stream stream))
+                    {
+                        throw new NotImplementedException();
+                    }
+
+                    StreamReader sr = new StreamReader(stream);
+                    TopLevel tl = await new Parser(sr).ParseModule(imports[i].From);
+                    imports.AddRange(
+                        tl.Walk()
+                          .Select((NameExpression ne) => new ImportDetails(imports[i].To, ne))
+                    );
+                    modules[imports[i].From] = tl;
+                }
+
+                Variable variable = modules[imports[i].From]
+                        .DeclaredVariables
+                        .FirstOrDefault(variable => variable.Name == imports[i].Name);
+                
+                if (variable == null)
+                {
+                    throw new NotImplementedException();
+                }
+
+                imports[i].Variable = variable;
             }
 
-            Binder binder = new Binder();
-            binder.EnterFullScope();
-            toplevel.Bind(binder);
-            GlobalContext context = new GlobalContext();
-            InternalLambda initializationLambda = new InternalLambda
+            // We need to bind twice in order to determine some of
+            // the types, such as for a method in a class first,
+            // then bind again for its usage
+            foreach (TopLevel module in modules.Values)
             {
-                closures = new Closure[0],
-                description = new InternalLambdaDescription
+                module.Bind(new Binder());
+            }
+            if (toplevel.ModuleName == null)
+            {
+                toplevel.Bind(new Binder());
+            }
+
+            foreach (TopLevel module in modules.Values)
+            {
+                module.Bind(new Binder());
+            }
+            if (toplevel.ModuleName == null)
+            {
+                toplevel.Bind(new Binder());
+            }
+
+            Dictionary<string, GlobalContext> contexts =
+                new Dictionary<string, GlobalContext>();
+            foreach (TopLevel module in modules.Values)
+            {
+                contexts[module.ModuleName] = BuildContext(module);
+            }
+
+            // TODO: what if someone tries to import an import?
+            foreach (ImportDetails import in imports)
+            {
+                contexts[import.To].AssignVariable(
+                    import.NameExpression.Variable.Name,
+                    contexts[import.From].LookupVariable(import.Name)
+                );
+            }
+            return contexts[toplevel.ModuleName];
+
+            GlobalContext BuildContext(TopLevel toplevel)
+            {
+                GlobalContext context = new GlobalContext();
+                InternalLambda initializationLambda = new InternalLambda
                 {
-                    argTypes = new RedwoodType[0],
-                    // All fields should go the global definition, but some
-                    // temporary variables may be used to define constructors
-                    stackSize = binder.LeaveFullScope(),
-                    closureSize = 0,
-                    instructions = toplevel.Compile().ToArray(),
-                    returnType = null
-                },
-                context = context
-            };
-            // Populate the global context
-            initializationLambda.Run();
-            return context;
+                    closures = new Closure[0],
+                    description = new InternalLambdaDescription
+                    {
+                        argTypes = new RedwoodType[0],
+                        // All fields should go the global definition, but some
+                        // temporary variables may be used to define constructors
+                        stackSize = toplevel.StackSize,
+                        closureSize = 0,
+                        instructions = toplevel.Compile().ToArray(),
+                        returnType = null
+                    },
+                    context = context
+                };
+                // Populate the global context
+                initializationLambda.Run();
+                return context;
+            }
+
         }
 
         public static Lambda CompileFunction(FunctionDefinition function)

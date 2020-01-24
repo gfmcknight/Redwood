@@ -21,6 +21,12 @@
     <None Update="FileTests\class_def_test.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="FileTests\module_test.rwd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="FileTests\module_test_a.rwd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="FileTests\overload_test.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -25,7 +25,7 @@ namespace Redwood.Ast
 
             if (chainType.CSharpType == null)
             {
-                KnownType = chainType.slotTypes[chainType.slotMap[Element.Name]];
+                KnownType = chainType.slotTypes?[chainType.slotMap[Element.Name]];
             }
             else
             {

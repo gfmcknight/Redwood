@@ -8,24 +8,16 @@ namespace Redwood.Ast
 {
     public class TopLevel : Statement
     {
+        public string ModuleName { get; set; }
         public Definition[] Definitions { get; set; }
 
+        internal List<Variable> DeclaredVariables { get; set; }
         internal List<OverloadGroup> Overloads { get; set; }
+        internal int StackSize { get; set; }
 
         internal override void Bind(Binder binder)
         {
-            foreach (OverloadGroup overload in Overloads)
-            {
-                overload.DoBind(new Binder());
-            }
-            // First, bind in order to set up the types of all lambdas
-            foreach (Definition definition in Definitions)
-            {
-                definition.Bind(new Binder());
-            }
-
-            // TODO: Bind all included modules here
-            
+            binder.EnterFullScope();
             // Now that the types of all functions are known, we can bind again
             // overwriting all variable positions
             foreach (Definition definition in Definitions)
@@ -36,7 +28,7 @@ namespace Redwood.Ast
             {
                 overload.DoBind(binder);
             }
-            // TODO: Bind all included modules again
+            StackSize = binder.LeaveFullScope();
         }
 
         internal override IEnumerable<Instruction> Compile()
@@ -68,12 +60,12 @@ namespace Redwood.Ast
                 freeVars.AddRange(definition.Walk());
             }
 
-            List<Variable> definedVariables = new List<Variable>();
+            DeclaredVariables = new List<Variable>();
             foreach (Definition definition in Definitions)
             {
                 if (!(definition is FunctionDefinition))
                 {
-                    definedVariables.Add(definition.DeclaredVariable);
+                    DeclaredVariables.Add(definition.DeclaredVariable);
                 }
             }
 
@@ -82,14 +74,14 @@ namespace Redwood.Ast
                 .Select(statement => statement as FunctionDefinition)
                 .ToList();
             Overloads = Compiler.GenerateOverloads(functions);
-            definedVariables.AddRange(Overloads.Select(o => o.variable));
+            DeclaredVariables.AddRange(Overloads.Select(o => o.variable));
 
-            foreach (Variable variable in definedVariables)
+            foreach (Variable variable in DeclaredVariables)
             {
                 variable.Global = true;
             }
 
-            Compiler.MatchVariables(freeVars, definedVariables);
+            Compiler.MatchVariables(freeVars, DeclaredVariables);
             return freeVars;
 
             // TODO: Walk the imports that refer to actual Redwood modules?

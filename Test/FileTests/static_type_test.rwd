@@ -1,19 +1,5 @@
 ﻿import Test.RAssert;
 
-class TestClass() 
-{
-    let int field = 6;
-    
-    constructor() {}
-
-    function<int> postIncrement()
-    {
-        let int retVal = field;
-        field = field + 1;
-        return retVal;
-    }
-}
-
 function<int> testMain(RAssert assert)
 {
     assert.Equal(type(int), statictype(3));
@@ -49,4 +35,18 @@ function<int> testMain(RAssert assert)
     assert.Equal(type(bool), statictype(1 >= 2));
 
     return 0;
+}
+
+class TestClass() 
+{
+    let int field = 6;
+    
+    constructor() {}
+
+    function<int> postIncrement()
+    {
+        let int retVal = field;
+        field = field + 1;
+        return retVal;
+    }
 }

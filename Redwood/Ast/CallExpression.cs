@@ -78,7 +78,7 @@ namespace Redwood.Ast
             }
             else if (Callee.GetKnownType().CSharpType == null)
             {
-                LambdaType = Callee.GetKnownType().slotTypes[
+                LambdaType = Callee.GetKnownType().slotTypes?[
                     Callee.GetKnownType().slotMap[FunctionName.Name]
                 ];
             }

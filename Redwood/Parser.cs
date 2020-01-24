@@ -23,7 +23,6 @@ namespace Redwood
         private const int BufferSize = 1024;
         private static List<BinaryOpGroupParser> binaryOpParsers;
 
-
         enum TokenType
         {
             Token,
@@ -57,7 +56,6 @@ namespace Redwood
             currentBuffer = new char[BufferSize];
             lastBuffer = new char[BufferSize];
         }
-
 
         static Parser()
         {
@@ -215,7 +213,7 @@ namespace Redwood
             }
         }
 
-        public async Task<TopLevel> ParseModule()
+        public async Task<TopLevel> ParseModule(string name = "main")
         {
             List<Definition> definitions = new List<Definition>();
             while (!eof)
@@ -237,6 +235,7 @@ namespace Redwood
 
             return new TopLevel
             {
+                ModuleName = name,
                 Definitions = (definitions.ToArray())
             };
         }
@@ -410,11 +409,6 @@ namespace Redwood
             else
             {
                 returnType = null;
-            }
-
-            if (returnType == null)
-            {
-                throw new NotImplementedException();
             }
 
             if (!await MaybeName())
@@ -1076,7 +1070,7 @@ namespace Redwood
             await AdvanceToNextToken();
             // The first letter of the identifier must be a letter, but numbers
             // can follow
-            if (!char.IsLetter(currentBuffer[bufferPos]))
+            if (!char.IsLetter(currentBuffer[bufferPos]) && currentBuffer[bufferPos] != '_')
             {
                 return false;
             }
@@ -1086,7 +1080,8 @@ namespace Redwood
             {
                 sb.Append(currentBuffer[bufferPos]);
                 await Advance();
-            } while (char.IsLetterOrDigit(currentBuffer[bufferPos]) && !eof);
+            } while ((char.IsLetterOrDigit(currentBuffer[bufferPos]) ||
+                      currentBuffer[bufferPos] == '_') && !eof);
 
             LastName = sb.ToString();
             lastToken = TokenType.Name;

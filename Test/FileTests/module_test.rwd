@@ -1,0 +1,13 @@
+﻿import Test.RAssert;
+import module_test_a.TestClass;
+import module_test_a.callCallback;
+
+function<int> callback(TestClass tc)
+{
+    return tc.paramB;
+}
+
+function testMain(RAssert assert)
+{
+    assert.Equal(4, callCallback(TestClass(2, 4)));
+}

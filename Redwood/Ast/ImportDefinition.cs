@@ -10,6 +10,7 @@ namespace Redwood.Ast
     class ImportDefinition : Definition
     {
         private DotWalkExpression namespaceWalk;
+
         public DotWalkExpression NamespaceWalk {
             get
             {
@@ -22,27 +23,36 @@ namespace Redwood.Ast
             }
         }
 
+        internal NameExpression FreeVar { get; set; }
+
         internal override void Bind(Binder binder)
         {
             base.Bind(binder);
-            DeclaredVariable.KnownType = RedwoodType.GetForCSharpType(typeof(RedwoodType));
+            if (FreeVar != null)
+            {
+                DeclaredVariable.KnownType = FreeVar.GetKnownType();
+                DeclaredVariable.DefinedConstant = FreeVar.Variable.DefinedConstant;
+                DeclaredVariable.ConstantValue = FreeVar.Variable.ConstantValue;
+            }
         }
 
         internal override IEnumerable<NameExpression> Walk()
         {
             base.Walk();
-            DeclaredVariable.DefinedConstant = true;
-            DeclaredVariable.KnownType = RedwoodType.GetForCSharpType(typeof(RedwoodType));
             string typename = CollectName(namespaceWalk);
 
             if (TryGetTypeFromAssemblies(typename, out Type cSharpType))
             {
+                DeclaredVariable.DefinedConstant = true;
+                DeclaredVariable.KnownType = RedwoodType.GetForCSharpType(typeof(RedwoodType));
                 DeclaredVariable.ConstantValue = RedwoodType.GetForCSharpType(cSharpType);
             }
             else
             {
-                // TODO: Cross module imports
-                throw new NotImplementedException();
+                FreeVar = new NameExpression { Name = typename };
+                // Let the compiler take it because it needs to go parse
+                // these additional modules
+                return new NameExpression[] { FreeVar };
             }
             return new NameExpression[0];
         }

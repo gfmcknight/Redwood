@@ -38,7 +38,7 @@ namespace Test
             );
             TopLevel module = await parser.ParseModule();
             Assert.NotNull(module);
-            return Compiler.CompileModule(module);
+            return await Compiler.CompileModule(module, null);
         }
 
         [Fact]
@@ -320,6 +320,20 @@ function<int> testFunc()
 
             Lambda lambda = await MakeLambda(code);
             Assert.Equal(8, lambda.Run());
+        }
+
+        [Fact]
+        public async Task CanUseUnderScores()
+        {
+            string code = @"
+function<int> test_func()
+{
+    let int _x = 2;
+    return _x;
+}";
+
+            Lambda lambda = await MakeLambda(code);
+            Assert.Equal(2, lambda.Run());
         }
     }
 }
