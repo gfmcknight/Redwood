@@ -18,12 +18,20 @@ namespace Redwood.Ast
 
         internal override void Bind(Binder binder)
         {
+            foreach (Statement statement in Statements.Where(s => s is FunctionDefinition))
+            {
+                statement.Bind(binder);
+            }
+
+            // Overloads must be bound before temporary variables or else they
+            // will get overwritten, but after function definitions in order to
+            // know their own type
             foreach (OverloadGroup overload in Overloads)
             {
                 overload.DoBind(binder);
             }
 
-            foreach (Statement statement in Statements)
+            foreach (Statement statement in Statements.Where(s => !(s is FunctionDefinition)))
             {
                 statement.Bind(binder);
             }

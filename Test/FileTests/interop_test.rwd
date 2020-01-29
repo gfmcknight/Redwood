@@ -1,0 +1,12 @@
+﻿import Test.RAssert;
+import Test.SampleClass;
+
+function testMain(RAssert assert)
+{
+    let SampleClass sc = SampleClass(2, 5);
+    assert.Equal(2, sc.SampleField);
+    assert.Equal(5, sc.SampleProperty);
+    sc = sc + SampleClass(1, 1);
+    assert.Equal(3, sc.SampleField);
+    assert.Equal(6, sc.SampleProperty);
+}

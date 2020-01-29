@@ -71,6 +71,24 @@ namespace Redwood.Ast
             if (Callee == null)
             {
                 LambdaType = FunctionName.GetKnownType();
+                // If we have a lambda group, we should try to resolve it
+                if (LambdaType != null &&
+                    LambdaType.CSharpType == typeof(LambdaGroup) &&
+                    FullyResolved &&
+                    (LambdaType.GenericArguments?.Length ?? 0) > 0)
+                {
+                    RuntimeUtil.TrySelectOverload(
+                        argumentTypes,
+                        LambdaType
+                            .GenericArguments
+                            // Ignore the return type from lambdas
+                            .Select(overload =>
+                                overload.GenericArguments.SkipLast(1).ToArray())
+                            .ToArray(),
+                        out int index
+                    );
+                    LambdaType = LambdaType.GenericArguments[index];
+                }
             }
             else if (Callee.GetKnownType() == null)
             {
@@ -78,9 +96,9 @@ namespace Redwood.Ast
             }
             else if (Callee.GetKnownType().CSharpType == null)
             {
-                LambdaType = Callee.GetKnownType().slotTypes?[
-                    Callee.GetKnownType().slotMap[FunctionName.Name]
-                ];
+                LambdaType = Callee
+                    .GetKnownType()
+                    .GetKnownTypeOfMember(FunctionName.Name);
             }
             else
             {
@@ -139,6 +157,7 @@ namespace Redwood.Ast
             if (Callee == null)
             {
                 instructions.AddRange(FunctionName.Compile());
+                // TODO: Should this just use LambdaType?
                 RedwoodType knownType = FunctionName.GetKnownType();
                 if (knownType == null)
                 {
@@ -148,10 +167,32 @@ namespace Redwood.Ast
                 {
                     instructions.Add(new InternalCallInstruction(argumentLocations));
                 }
-                else if (knownType.CSharpType == typeof(ExternalLambda) ||
-                         knownType.CSharpType == typeof(LambdaGroup))
+                else if (knownType.CSharpType == typeof(ExternalLambda))
                 {
                     instructions.Add(new ExternalCallInstruction(argumentLocations));
+                }
+                else if (knownType.CSharpType == typeof(LambdaGroup))
+                {
+                    if (FullyResolved && knownType.GenericArguments != null)
+                    {
+                        RuntimeUtil.TrySelectOverload(
+                            argumentTypes,
+                            knownType.GenericArguments
+                                .Select(lambdaType => lambdaType
+                                    .GenericArguments
+                                    .SkipLast(1)
+                                    .ToArray()
+                                )
+                                .ToArray(),
+                            out int index
+                        );
+                        instructions.Add(new LookupLambdaGroupOverloadInstruction(index));
+                        instructions.Add(new ExternalCallInstruction(argumentLocations));
+                    }
+                    else
+                    {
+                        instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
+                    }
                 }
                 else if (knownType.CSharpType == typeof(RedwoodType))
                 {
@@ -167,7 +208,9 @@ namespace Redwood.Ast
             {
                 instructions.AddRange(Callee.Compile());
                 RedwoodType calleeType = Callee.GetKnownType();
-                if (calleeType == null)
+                // Calls that are not fully resolved MUST rely on some amount of
+                // dynamic resolution
+                if (calleeType == null || !FullyResolved)
                 {
                     // Try to resolve on the fly if we can't figure it out
                     instructions.Add(new LookupExternalMemberLambdaInstruction(FunctionName.Name, calleeType));
@@ -223,7 +266,7 @@ namespace Redwood.Ast
 
         public override RedwoodType GetKnownType()
         {
-            if (LambdaType == null)
+            if (LambdaType == null || LambdaType.CSharpType == typeof(LambdaGroup))
             {
                 return null;
             }

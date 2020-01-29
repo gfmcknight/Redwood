@@ -173,4 +173,20 @@ namespace Redwood.Instructions
             return 1;
         }
     }
+
+    internal class LookupLambdaGroupOverloadInstruction : Instruction
+    {
+        private int index;
+
+        public LookupLambdaGroupOverloadInstruction(int index)
+        {
+            this.index = index;
+        }
+
+        public int Execute(Frame frame)
+        {
+            frame.result = (frame.result as LambdaGroup).lambdas[index];
+            return 1;
+        }
+    }
 }

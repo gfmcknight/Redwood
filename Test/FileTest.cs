@@ -18,6 +18,7 @@ namespace Test
         [InlineData("static_type_test.rwd")]
         [InlineData("overload_test.rwd")]
         [InlineData("module_test.rwd")]
+        [InlineData("interop_test.rwd")]
         public async void RunTestFromFile(string filename)
         {
             Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());

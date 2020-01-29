@@ -117,7 +117,14 @@ namespace Redwood.Instructions
             {
                 args[i] = frame.stack[argLocations[i]];
             }
-            frame.result = lambda.Run(args);
+            if (lambda is LambdaGroup group)
+            {
+                frame.result = group.RunWithExpectedTypes(argTypesHint, args);
+            }
+            else
+            {
+                frame.result = lambda.Run(args);
+            }
             return 1;
         }
     }

@@ -22,16 +22,10 @@ namespace Redwood.Ast
 
         internal override void Bind(Binder binder)
         {
+            Type.Bind(binder);
             base.Bind(binder);
 
-            if (RedwoodType.TryGetPrimitiveFromName(Type.TypeName.Name, out RedwoodType type))
-            {
-                DeclaredVariable.KnownType = type;
-            }
-            else if (Type.TypeName.Variable.DefinedConstant && !Type.TypeName.Variable.Mutated)
-            {
-                DeclaredVariable.KnownType = Type.TypeName.Variable.ConstantValue as RedwoodType;
-            }
+            DeclaredVariable.KnownType = Type.GetIndicatedType();
 
             // In the case that we have a closured variable, we still need
             // to take the input on the stack, so we need a temporary variable

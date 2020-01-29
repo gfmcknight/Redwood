@@ -805,6 +805,33 @@ namespace Redwood
                     throw new NotImplementedException();
                 }
             }
+            else if (await MaybeToken("tag", true))
+            {
+                if (!await MaybeToken("(", false))
+                {
+                    throw new NotImplementedException();
+                }
+
+                if (!await MaybeString())
+                {
+                    throw new NotImplementedException();
+                }
+
+                string tag = LastString;
+
+                if (!await MaybeToken(")", false))
+                {
+                    throw new NotImplementedException();
+                }
+
+                return new TagExpression
+                {
+                    Tag = new StringConstant
+                    {
+                        Value = tag
+                    }
+                };
+            }
             else if (await MaybeToken("(", false))
             {
                 // Parse a parenthetical expression

@@ -10,4 +10,5 @@ function<int> callback(TestClass tc)
 function testMain(RAssert assert)
 {
     assert.Equal(4, callCallback(TestClass(2, 4)));
+    assert.Equal(type(int), statictype(callCallback(TestClass(2, 4))));
 }

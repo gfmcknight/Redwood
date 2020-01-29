@@ -10,6 +10,8 @@ namespace Redwood.Runtime
 {
     public class RedwoodType
     {
+        internal static Dictionary<string, RedwoodType> specialMappedTypes =
+            new Dictionary<string, RedwoodType>();
         internal static Dictionary<Type, RedwoodType> typeAdaptors = new Dictionary<Type, RedwoodType>();
         internal static Dictionary<ImmutableList<RedwoodType>, List<RedwoodType>> lambdaTypes =
             new Dictionary<ImmutableList<RedwoodType>, List<RedwoodType>>();
@@ -30,6 +32,17 @@ namespace Redwood.Runtime
         public RedwoodType[] GenericArguments { get; private set; }
         public RedwoodType NonGenericType { get; private set; }
         public Lambda Constructor { get; internal set; }
+
+        static RedwoodType()
+        {
+            specialMappedTypes.Add("?", null);
+
+            specialMappedTypes.Add("int", GetForCSharpType(typeof(int)));
+            specialMappedTypes.Add("string", GetForCSharpType(typeof(string)));
+            specialMappedTypes.Add("double", GetForCSharpType(typeof(double)));
+            specialMappedTypes.Add("bool", GetForCSharpType(typeof(bool)));
+            specialMappedTypes.Add("object", GetForCSharpType(typeof(object)));
+        }
 
         public static RedwoodType GetForCSharpType(Type type)
         {
@@ -139,7 +152,7 @@ namespace Redwood.Runtime
             while (walker != null && walker != type)
             {
                 count++;
-                walker = walker.BaseType; 
+                walker = walker.BaseType;
             }
             return count;
         }
@@ -154,32 +167,27 @@ namespace Redwood.Runtime
             return type == typeof(int) ||
                    type == typeof(string) ||
                    type == typeof(bool) ||
-                   type == typeof(double);
+                   type == typeof(double); 
         }
 
-        internal static bool TryGetPrimitiveFromName(string name, out RedwoodType type)
+        internal static bool TryGetSpecialMappedType(string name, out RedwoodType type)
         {
-            // TODO: This needs a better structure than just 
-            // a massive switch statement to populate all types
-            switch (name)
+            return specialMappedTypes.TryGetValue(name, out type);
+        }
+
+        internal RedwoodType GetKnownTypeOfMember(string member)
+        {
+            if (slotTypes == null)
             {
-                case "int":
-                    type = GetForCSharpType(typeof(int));
-                    return true;
-                case "string":
-                    type = GetForCSharpType(typeof(string));
-                    return true;
-                case "bool":
-                case "boolean":
-                    type = GetForCSharpType(typeof(bool));
-                    return true;
-                case "?": // TODO: Oh boy!
-                    type = null;
-                    return true;
-                default:
-                    type = null;
-                    return false;
+                return null;
             }
+
+            if (!slotMap.ContainsKey(member))
+            {
+                return null;
+            }
+
+            return slotTypes[slotMap[member]];
         }
 
         internal int GetSlotNumberForOverload(string functionName, RedwoodType[] argTypes)
@@ -201,6 +209,22 @@ namespace Redwood.Runtime
                 // TODO!
                 throw new NotImplementedException("Handling of unfound slots");
             }
+        }
+
+        internal RedwoodType GetGenericSpecialization(RedwoodType[] genericArgs)
+        {
+            RedwoodType newType = new RedwoodType();
+            newType.CSharpType = CSharpType;
+            // TODO: Base type with generic specialization?
+            newType.BaseType = BaseType;
+            newType.GenericArguments = genericArgs;
+            newType.Constructor = Constructor;
+            // TODO: Some of these will need generic specialization
+            newType.implicitConversionMap = implicitConversionMap;
+            newType.slotMap = slotMap;
+            newType.slotTypes = slotTypes;
+            newType.overloadsMap = overloadsMap;
+            return newType;
         }
 
         internal static RedwoodType GetForLambdaArgsTypes(
@@ -256,6 +280,14 @@ namespace Redwood.Runtime
             {
                 BaseType = GetForCSharpType(cSharpType.BaseType);
             }
+
+            // TODO: Is LINQ too slow for a runtime context?
+            Constructor = RuntimeUtil.CanonicalizeLambdas(
+                cSharpType
+                    .GetConstructors()
+                    .Select(constructor => new ExternalLambda(this, constructor))
+                    .ToArray()
+            );
         }
 
         internal static RedwoodType Make(ClassDefinition @class)

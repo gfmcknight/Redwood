@@ -28,7 +28,7 @@ namespace Redwood.Ast
         internal override IEnumerable<NameExpression> Walk()
         {
             // TODO: Walk the GenericInnerTypes
-            if (RedwoodType.TryGetPrimitiveFromName(TypeName.Name, out RedwoodType type))
+            if (RedwoodType.TryGetSpecialMappedType(TypeName.Name, out RedwoodType type))
             {
                 return new NameExpression[0];
             }
@@ -37,7 +37,7 @@ namespace Redwood.Ast
 
         internal RedwoodType GetIndicatedType()
         {
-            if (RedwoodType.TryGetPrimitiveFromName(TypeName.Name, out RedwoodType type))
+            if (RedwoodType.TryGetSpecialMappedType(TypeName.Name, out RedwoodType type))
             {
                 return type;
             }

@@ -60,13 +60,24 @@ namespace Redwood.Runtime
     internal class ExternalLambda : Lambda
     {
         internal object boundTarget;
-        internal MethodInfo info;
+        internal MethodBase info;
+
+        internal ExternalLambda(RedwoodType type, ConstructorInfo info)
+        {
+            Init(null, info);
+            ReturnType = type;
+        }
 
         internal ExternalLambda(object target, MethodInfo info)
         {
+            Init(target, info);
+            ReturnType = RedwoodType.GetForCSharpType(info.ReturnType);
+        }
+        
+        private void Init(object target, MethodBase info)
+        {
             boundTarget = target;
             this.info = info;
-            ReturnType = RedwoodType.GetForCSharpType(info.ReturnType);
             ParameterInfo[] parameters = info.GetParameters();
             RedwoodType[] expectedArgs = new RedwoodType[parameters.Length];
             for (int i = 0; i < parameters.Length; i++)
@@ -92,6 +103,13 @@ namespace Redwood.Runtime
                 {
                     throw new ArgumentException("Invalid argument type " + args[i].ToString());
                 }
+            }
+
+            // TODO: should there get a different lambda type for
+            // constructor invocation?
+            if (info.IsConstructor)
+            {
+                return ((ConstructorInfo)info).Invoke(args);
             }
 
             return info.Invoke(boundTarget, args);
@@ -177,6 +195,19 @@ namespace Redwood.Runtime
         public object Run(params object[] args)
         {
             RedwoodType[] types = RuntimeUtil.GetTypesFromArgs(args);
+            return RuntimeUtil.SelectSingleOverload(types, this).Run(args);
+        }
+
+        internal object RunWithExpectedTypes(RedwoodType[] knownArgTypes, object[] args)
+        {
+            RedwoodType[] types = RuntimeUtil.GetTypesFromArgs(args);
+            for (int i = 0; i < knownArgTypes.Length; i++)
+            {
+                if (knownArgTypes[i] != null)
+                {
+                    types[i] = knownArgTypes[i];
+                }
+            }
             return RuntimeUtil.SelectSingleOverload(types, this).Run(args);
         }
     }

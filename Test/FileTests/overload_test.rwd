@@ -1,4 +1,6 @@
 ﻿import Test.RAssert;
+import Test.OverloadClass1;
+import Test.OverloadClass2;
 
 function<int> f() { return 1; }
 function<int> f(? a) { return 2; }
@@ -31,6 +33,9 @@ class TestClass()
         assert.Equal(27, f(3, "5"));
         assert.Equal(28, f("5", 3));
 
+        let ? dynamicValue = 3;
+        assert.Equal(23, f(dynamicValue));
+
         return 0;
     }
 }
@@ -46,8 +51,11 @@ function<int> testInBlockScope(RAssert assert)
     function<int> f(int a, string b) { return 17; }
     function<int> f(? a, int b) { return 18; }
 
+    let object intAsObject = 3;
+
     assert.Equal(11, f());
     assert.Equal(12, f(assert));
+    assert.Equal(12, f(intAsObject));
     assert.Equal(13, f(5));
     assert.Equal(14, f("5"));
     assert.Equal(15, f(true));
@@ -55,13 +63,19 @@ function<int> testInBlockScope(RAssert assert)
     assert.Equal(17, f(3, "5"));
     assert.Equal(18, f("5", 3));
 
+    let ? dynamicValue = 3;
+    assert.Equal(13, f(dynamicValue));
+
     return 0;
 }
 
 function<int> testMain(RAssert assert)
 {
+    let object intAsObj = 3;
+
     assert.Equal(1, f());
     assert.Equal(2, f(assert));
+    assert.Equal(2, f(intAsObj));
     assert.Equal(3, f(5));
     assert.Equal(4, f("5"));
     assert.Equal(5, f(true));
@@ -69,18 +83,107 @@ function<int> testMain(RAssert assert)
     assert.Equal(7, f(3, "5"));
     assert.Equal(8, f("5", 3));
 
+    let ? dynamicValue = 3;
+    assert.Equal(3, f(dynamicValue));
+
     testInBlockScope(assert);
-    
+
     let TestClass tc = TestClass();
     tc.testInClassScope(assert);
+
     assert.Equal(21, tc.f());
     assert.Equal(22, tc.f(assert));
+    assert.Equal(22, tc.f(intAsObj));
     assert.Equal(23, tc.f(5));
     assert.Equal(24, tc.f("5"));
     assert.Equal(25, tc.f(true));
     assert.Equal(26, tc.f(3, 3));
     assert.Equal(27, tc.f(3, "5"));
     assert.Equal(28, tc.f("5", 3));
-    
+
+    let OverloadClass1 oc1 = OverloadClass1();
+    assert.Equal(31, oc1.f());
+    assert.Equal(32, oc1.f(assert));
+    assert.Equal(32, oc1.f(intAsObj));
+    assert.Equal(33, oc1.f(5));
+    assert.Equal(34, oc1.f("5"));
+    assert.Equal(35, oc1.f(true));
+    assert.Equal(36, oc1.f(3, 3));
+    assert.Equal(37, oc1.f(3, "5"));
+    assert.Equal(38, oc1.f("5", 3));
+    assert.Equal(33, oc1.f(dynamicValue));
+
+    let OverloadClass2 oc2 = OverloadClass2();
+    assert.Equal(41, oc2.f());
+    assert.Equal(42, oc2.f(assert));
+    assert.Equal(42, oc2.f(intAsObj));
+    assert.Equal(43, oc2.f(5));
+    assert.Equal(44, oc2.f("5"));
+    assert.Equal(45, oc2.f(true));
+    assert.Equal(46, oc2.f(3, 3));
+    assert.Equal(47, oc2.f(3, "5"));
+    assert.Equal(48, oc2.f("5", 3));
+    assert.Equal(43, oc2.f(dynamicValue));
+
+    let ? fn = f;
+    assert.Equal(1, fn());
+    assert.Equal(2, fn(assert));
+    assert.Equal(2, fn(intAsObj));
+    assert.Equal(3, fn(5));
+    assert.Equal(4, fn("5"));
+    assert.Equal(5, fn(true));
+    assert.Equal(6, fn(3, 3));
+    assert.Equal(7, fn(3, "5"));
+    assert.Equal(8, fn("5", 3));
+    assert.Equal(3, fn(dynamicValue));
+
+    fn = tc.f;
+    assert.Equal(21, fn());
+    assert.Equal(22, fn(assert));
+    assert.Equal(22, fn(intAsObj));
+    assert.Equal(23, fn(5));
+    assert.Equal(24, fn("5"));
+    assert.Equal(25, fn(true));
+    assert.Equal(26, fn(3, 3));
+    assert.Equal(27, fn(3, "5"));
+    assert.Equal(28, fn("5", 3));
+    assert.Equal(23, fn(dynamicValue));
+
+    fn = tc;
+    assert.Equal(21, fn.f());
+    assert.Equal(22, fn.f(assert));
+    assert.Equal(22, fn.f(intAsObj));
+    assert.Equal(23, fn.f(5));
+    assert.Equal(24, fn.f("5"));
+    assert.Equal(25, fn.f(true));
+    assert.Equal(26, fn.f(3, 3));
+    assert.Equal(27, fn.f(3, "5"));
+    assert.Equal(28, fn.f("5", 3));
+    assert.Equal(23, fn.f(dynamicValue));
+
+    fn = oc1.f;
+    assert.Equal(31, fn());
+    assert.Equal(32, fn(assert));
+    assert.Equal(32, fn(intAsObj));
+    assert.Equal(33, fn(5));
+    assert.Equal(34, fn("5"));
+    assert.Equal(35, fn(true));
+    assert.Equal(36, fn(3, 3));
+    assert.Equal(37, fn(3, "5"));
+    assert.Equal(38, fn("5", 3));
+    assert.Equal(33, fn(dynamicValue));
+
+    fn = oc1;
+    assert.Equal(31, fn.f());
+    assert.Equal(32, fn.f(assert));
+    assert.Equal(32, fn.f(intAsObj));
+    assert.Equal(33, fn.f(5));
+    assert.Equal(34, fn.f("5"));
+    assert.Equal(35, fn.f(true));
+    assert.Equal(36, fn.f(3, 3));
+    assert.Equal(37, fn.f(3, "5"));
+    assert.Equal(38, fn.f("5", 3));
+    assert.Equal(33, fn.f(dynamicValue));
+
     return 0;
 }

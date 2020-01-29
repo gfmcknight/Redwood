@@ -135,7 +135,14 @@ namespace Redwood
             // Don't double-bind any non-overloaded methods
             if (definitions.Count > 1)
             {
-                binder.BindVariable(variable);
+                variable.KnownType = variable.KnownType.GetGenericSpecialization(
+                   definitions
+                       .Select(
+                           definition => definition.DeclaredVariable.KnownType
+                       )
+                       .ToArray()
+               );
+               binder.BindVariable(variable);
             }
         }
     }
