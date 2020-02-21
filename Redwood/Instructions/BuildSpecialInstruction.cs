@@ -9,7 +9,7 @@ namespace Redwood.Instructions
     {
         private InternalLambdaDescription description;
 
-        internal BuildInternalLambdaInstruction(InternalLambdaDescription description)
+        public BuildInternalLambdaInstruction(InternalLambdaDescription description)
         {
             this.description = description;
         }
@@ -31,7 +31,7 @@ namespace Redwood.Instructions
     {
         private InternalLambdaDescription[] descriptions;
 
-        internal BuildInternalLambdasInstruction(InternalLambdaDescription[] descriptions)
+        public BuildInternalLambdasInstruction(InternalLambdaDescription[] descriptions)
         {
             this.descriptions = descriptions;
         }
@@ -58,7 +58,7 @@ namespace Redwood.Instructions
     {
         private MethodGroup group;
 
-        internal BuildExternalLambdaInstruction(MethodGroup group)
+        public BuildExternalLambdaInstruction(MethodGroup group)
         {
             this.group = group;
         }
@@ -70,11 +70,11 @@ namespace Redwood.Instructions
         }
     }
 
-    internal class BuildRedwoodObjectFromClosure : Instruction
+    internal class BuildRedwoodObjectFromClosureInstruction : Instruction
     {
         private RedwoodType type;
 
-        internal BuildRedwoodObjectFromClosure(RedwoodType type)
+        public BuildRedwoodObjectFromClosureInstruction(RedwoodType type)
         {
             this.type = type;
         }
@@ -85,6 +85,24 @@ namespace Redwood.Instructions
             @object.Type = type;
             @object.slots = frame.closures[frame.closures.Length - 1].data;
             frame.result = @object;
+            return 1;
+        }
+    }
+
+    internal class SetStaticOverloadInstruction : Instruction
+    {
+        private RedwoodType type;
+        private int index;
+
+        public SetStaticOverloadInstruction(RedwoodType type, int index)
+        {
+            this.type = type;
+            this.index = index;
+        }
+
+        public int Execute(Frame frame)
+        {
+            type.staticLambdas[index] = frame.result as Lambda;
             return 1;
         }
     }

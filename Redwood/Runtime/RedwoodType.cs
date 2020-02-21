@@ -26,6 +26,11 @@ namespace Redwood.Runtime
         internal RedwoodType[] slotTypes;
         internal int numSlots;
 
+        // Name of member/method -> slot number
+        internal Dictionary<string, int> staticSlotMap;
+        internal RedwoodType[] staticSlotTypes;
+        internal Lambda[] staticLambdas;
+
         public RedwoodType BaseType { get; private set; }
         public Type CSharpType { get; private set; }
         // TODO: Make this immutable?
@@ -173,6 +178,21 @@ namespace Redwood.Runtime
         internal static bool TryGetSpecialMappedType(string name, out RedwoodType type)
         {
             return specialMappedTypes.TryGetValue(name, out type);
+        }
+
+        internal RedwoodType GetKnownTypeForStaticMember(string member)
+        {
+            if (staticSlotTypes == null)
+            {
+                return null;
+            }
+
+            if (!staticSlotMap.ContainsKey(member))
+            {
+                return null;
+            }
+
+            return staticSlotTypes[staticSlotMap[member]];
         }
 
         internal RedwoodType GetKnownTypeOfMember(string member)

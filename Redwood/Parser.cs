@@ -320,6 +320,7 @@ namespace Redwood
 
             List<FunctionDefinition> constructors = new List<FunctionDefinition>();
             List<FunctionDefinition> methods = new List<FunctionDefinition>();
+            List<FunctionDefinition> staticMethods = new List<FunctionDefinition>();
             List<LetDefinition> fields = new List<LetDefinition>();
 
             while (!eof)
@@ -340,7 +341,14 @@ namespace Redwood
                 if (function != null)
                 {
                     function.ClassMethod = true;
-                    methods.Add(function);
+                    if (function.Static)
+                    {
+                        staticMethods.Add(function);
+                    }
+                    else
+                    {
+                        methods.Add(function);
+                    }
                     continue;
                 }
 
@@ -360,6 +368,7 @@ namespace Redwood
                 Name = name,
                 Constructors = constructors.ToArray(),
                 Methods = methods.ToArray(),
+                StaticMethods = staticMethods.ToArray(),
                 ParameterFields = defaultParams,
                 InstanceFields =  fields.ToArray()
             };
@@ -395,7 +404,6 @@ namespace Redwood
             {
                 return null;
             }
-
 
             TypeSyntax returnType;
             if (await MaybeToken("<", false))
@@ -1182,8 +1190,7 @@ namespace Redwood
                                 sb.Append('\t');
                                 break;
                             default:
-                                // TODO: throw!
-                                break;
+                                throw new NotImplementedException();
                         }
                     }
                     else

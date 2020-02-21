@@ -64,7 +64,7 @@ namespace Redwood
             int stackSize = maxStack[scopeDepth];
             maxStack.RemoveAt(scopeDepth);
             stackPosition.RemoveAt(scopeDepth);
-            closurePosition.RemoveAt(scopeDepth);
+            closurePosition.RemoveAt(closurePosition.Count - 1);
             scopeDepth -= 1;
             return stackSize;
         }

@@ -15,17 +15,45 @@ namespace Redwood.Ast
         public LetDefinition[] InstanceFields { get; set; }
         public FunctionDefinition[] Constructors { get; set; }
         public FunctionDefinition[] Methods { get; set; }
+        public FunctionDefinition[] StaticMethods { get; set; }
         internal RedwoodType Type { get; set; }
         internal List<Variable> MemberVariables { get; set; }
         internal List<Variable> TempArgumentVariables { get; set; }
         internal List<Instruction> ConstructorBase { get; set; }
         internal int ConstructorStackSize { get; set; }
         internal List<OverloadGroup> Overloads { get; set; }
+        internal List<OverloadGroup> StaticOverloads { get; set; }
 
         internal override void Bind(Binder binder)
         {
             // TODO: Base type binding?
             base.Bind(binder);
+
+            // Bind using local variables when building the global context
+            // so that the lambdas can be available immediately when the
+            // module is initialized.
+            Type.staticLambdas = new Lambda[StaticOverloads.Count];
+            Type.staticSlotTypes = new RedwoodType[StaticOverloads.Count];
+            Type.staticSlotMap = new Dictionary<string, int>();
+
+            // TODO: Is it okay to make these temporary?
+            binder.Bookmark();
+
+            foreach (FunctionDefinition method in StaticMethods)
+            {
+                method.Bind(binder);
+            }
+
+            for (int i = 0; i < StaticOverloads.Count; i++)
+            {
+                OverloadGroup overload = StaticOverloads[i];
+                overload.DoBind(binder);
+
+                Type.staticSlotTypes[i] = overload.variable.KnownType;
+                Type.staticSlotMap[overload.name] = i;
+            }
+            binder.Checkout();
+
             binder.EnterFullScope();
 
             binder.Bookmark();
@@ -84,7 +112,6 @@ namespace Redwood.Ast
 
             // Since our class is just a closure
             Type.numSlots = binder.GetClosureSize();
-
 
             Type.slotMap = new Dictionary<string, int>();
             Type.slotTypes = new RedwoodType[Type.numSlots];
@@ -149,7 +176,7 @@ namespace Redwood.Ast
                 instructions.Add(new InternalCallInstruction(argLocations));
             }
 
-            instructions.Add(new BuildRedwoodObjectFromClosure(Type));
+            instructions.Add(new BuildRedwoodObjectFromClosureInstruction(Type));
             instructions.Add(new ReturnInstruction());
             return instructions;
         }
@@ -181,13 +208,25 @@ namespace Redwood.Ast
                 });
             }
 
-            return new Instruction[]
+            List<Instruction> instructions = new List<Instruction>();
+
+            instructions.AddRange(new Instruction[]
+                {
+                    new BuildInternalLambdasInstruction(constructorOverloads.ToArray()),
+                    new AssignConstructorLambda(Type),
+                    new LoadConstantInstruction(Type),
+                    Compiler.CompileVariableAssign(DeclaredVariable)
+                }
+            );
+
+            for (int i = 0; i < StaticOverloads.Count; i++)
             {
-                new BuildInternalLambdasInstruction(constructorOverloads.ToArray()),
-                new AssignConstructorLambda(Type),
-                new LoadConstantInstruction(Type),
-                Compiler.CompileVariableAssign(DeclaredVariable)
-            };
+                OverloadGroup overload = StaticOverloads[i];
+                instructions.AddRange(overload.Compile());
+                instructions.Add(Compiler.CompileVariableLookup(overload.variable));
+                instructions.Add(new SetStaticOverloadInstruction(Type, i));
+            }
+            return instructions;
         }
 
         internal override IEnumerable<NameExpression> Walk()
@@ -253,6 +292,15 @@ namespace Redwood.Ast
             // Treat the class as a closure that can be populated and then
             // updated by all methods.
             Compiler.MatchVariables(freeVars, declaredVars);
+
+            // When it comes to static methods, we don't want to match to
+            // our own instance variables.
+            foreach (FunctionDefinition method in StaticMethods)
+            {
+                freeVars.AddRange(method.Walk());
+            }
+            StaticOverloads = Compiler.GenerateOverloads(StaticMethods.ToList());
+
             return freeVars;
         }
     }

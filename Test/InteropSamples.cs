@@ -27,6 +27,15 @@ namespace Test
             return lastValue;
         }
 
+        public static int GetStatic(int i)
+        {
+            return i + 2;
+        }
+
+        public static int StaticOverload() { return 4; }
+        public static int StaticOverload(int i) { return 5; }
+        public static int StaticOverload(string s) { return 6; }
+
         public static SampleClass operator +(SampleClass a, SampleClass b)
         {
             return new SampleClass

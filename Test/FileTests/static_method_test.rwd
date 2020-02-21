@@ -1,0 +1,38 @@
+﻿import Test.RAssert;
+import Test.SampleClass;
+
+class TestClass
+{
+    static function<int> GetStatic(int i)
+    {
+        return i + 2;
+    }
+
+    static function<int> StaticOverload()
+    {
+        return 4;
+    }
+
+    static function<int> StaticOverload(int i)
+    {
+        return 5;
+    }
+
+    static function<int> StaticOverload(string s)
+    {
+        return 6;
+    }
+}
+
+function testMain(RAssert assert)
+{
+    assert.Equal(3, TestClass.GetStatic(1));
+    assert.Equal(4, TestClass.StaticOverload());
+    assert.Equal(5, TestClass.StaticOverload(1));
+    assert.Equal(6, TestClass.StaticOverload("test"));
+
+    assert.Equal(3, SampleClass.GetStatic(1));
+    assert.Equal(4, SampleClass.StaticOverload());
+    assert.Equal(5, SampleClass.StaticOverload(1));
+    assert.Equal(6, SampleClass.StaticOverload("test"));
+}

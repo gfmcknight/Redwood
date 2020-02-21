@@ -100,6 +100,43 @@ namespace Redwood.Ast
                     .GetKnownType()
                     .GetKnownTypeOfMember(FunctionName.Name);
             }
+            else if (Callee.GetKnownType().CSharpType == typeof(RedwoodType))
+            {
+                if (!Callee.Constant)
+                {
+                    LambdaType = null;
+                }
+                else if (Callee.EvaluateConstant() is RedwoodType calleeType)
+                {
+                    if (calleeType.CSharpType == null)
+                    {
+                        LambdaType = calleeType
+                            .GetKnownTypeForStaticMember(FunctionName.Name);
+                    }
+                    else
+                    {
+                        MethodInfo[] infos;
+                        bool methodExists = MemberResolver.TryResolveMethod(
+                            null,
+                            calleeType,
+                            FunctionName.Name,
+                            true,
+                            out infos);
+
+                        if (!methodExists)
+                        {
+                            throw new NotImplementedException();
+                        }
+
+                        BindExternal(infos);
+                    }
+                }
+                else
+                {
+                    // This should never happen?
+                    throw new NotImplementedException();
+                }
+            }
             else
             {
                 MethodInfo[] infos;
@@ -115,6 +152,12 @@ namespace Redwood.Ast
                     // TODO: Can an object have a lambda field?
                     throw new NotImplementedException();
                 }
+
+                BindExternal(infos);
+            }
+
+            void BindExternal(MethodInfo[] infos)
+            {
                 ExternalMethodGroup = new MethodGroup(infos);
                 ExternalMethodGroup.SelectOverloads(argumentTypes);
 
@@ -126,7 +169,7 @@ namespace Redwood.Ast
                 {
                     RedwoodType returnType =
                         RedwoodType.GetForCSharpType(ExternalMethodGroup.infos[0].ReturnType);
-                   
+
                     RedwoodType[] paramTypes = ExternalMethodGroup.infos[0].GetParameters()
                         .Select(param => RedwoodType.GetForCSharpType(param.ParameterType))
                         .ToArray();
@@ -159,81 +202,132 @@ namespace Redwood.Ast
                 instructions.AddRange(FunctionName.Compile());
                 // TODO: Should this just use LambdaType?
                 RedwoodType knownType = FunctionName.GetKnownType();
-                if (knownType == null)
-                {
-                    instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
-                }
-                else if (knownType.CSharpType == typeof(InternalLambda))
-                {
-                    instructions.Add(new InternalCallInstruction(argumentLocations));
-                }
-                else if (knownType.CSharpType == typeof(ExternalLambda))
-                {
-                    instructions.Add(new ExternalCallInstruction(argumentLocations));
-                }
-                else if (knownType.CSharpType == typeof(LambdaGroup))
-                {
-                    if (FullyResolved && knownType.GenericArguments != null)
-                    {
-                        RuntimeUtil.TrySelectOverload(
-                            argumentTypes,
-                            knownType.GenericArguments
-                                .Select(lambdaType => lambdaType
-                                    .GenericArguments
-                                    .SkipLast(1)
-                                    .ToArray()
-                                )
-                                .ToArray(),
-                            out int index
-                        );
-                        instructions.Add(new LookupLambdaGroupOverloadInstruction(index));
-                        instructions.Add(new ExternalCallInstruction(argumentLocations));
-                    }
-                    else
-                    {
-                        instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
-                    }
-                }
-                else if (knownType.CSharpType == typeof(RedwoodType))
-                {
-                    instructions.Add(new LookupExternalMemberLambdaInstruction("Constructor", knownType));
-                    instructions.Add(new ExternalCallInstruction(argumentLocations));
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                CompileCallNoCallee(instructions, argumentTypes, argumentLocations, knownType);
             }
             else
             {
-                instructions.AddRange(Callee.Compile());
                 RedwoodType calleeType = Callee.GetKnownType();
                 // Calls that are not fully resolved MUST rely on some amount of
                 // dynamic resolution
                 if (calleeType == null || !FullyResolved)
                 {
+                    instructions.AddRange(Callee.Compile());
+
                     // Try to resolve on the fly if we can't figure it out
                     instructions.Add(new LookupExternalMemberLambdaInstruction(FunctionName.Name, calleeType));
                     instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
                 }
-                else
+                else if (calleeType.CSharpType == null)
                 {
-                    if (calleeType.CSharpType == null)
+                    instructions.AddRange(Callee.Compile());
+
+                    instructions.Add(
+                        new LookupDirectMemberInstruction(
+                            calleeType.GetSlotNumberForOverload(FunctionName.Name, argumentTypes)));
+                    instructions.Add(new InternalCallInstruction(argumentLocations));
+                }
+                else if (calleeType.CSharpType == typeof(RedwoodType))
+                {
+                    if (!Callee.Constant)
                     {
-                        instructions.Add(
-                            new LookupDirectMemberInstruction(
-                                calleeType.GetSlotNumberForOverload(FunctionName.Name, argumentTypes)));
-                        instructions.Add(new InternalCallInstruction(argumentLocations));
+                        instructions.AddRange(Callee.Compile());
+                        instructions.Add(new TryCallInstruction(
+                            FunctionName.Name,
+                            calleeType,
+                            argumentTypes,
+                            argumentLocations)
+                        );
+                    }
+                    else if (Callee.EvaluateConstant() is RedwoodType type)
+                    {
+                        if (type.CSharpType == null)
+                        {
+                            int index = type.staticSlotMap[FunctionName.Name];
+                            instructions.Add(new LookupDirectStaticMemberInstruction(type, index));
+
+                            // Since this is a static member on the class and may be an
+                            // overload, let's defer to our logic for a simple calls.
+                            CompileCallNoCallee(
+                                instructions,
+                                argumentTypes,
+                                argumentLocations,
+                                type.staticSlotTypes[index]
+                            );
+                        }
+                        else
+                        {
+                            instructions.Add(new LoadConstantInstruction(null));
+                            instructions.Add(new BuildExternalLambdaInstruction(ExternalMethodGroup));
+                            instructions.Add(new ExternalCallInstruction(argumentLocations));
+                        }
                     }
                     else
                     {
-                        instructions.Add(new BuildExternalLambdaInstruction(ExternalMethodGroup));
-                        instructions.Add(new ExternalCallInstruction(argumentLocations));
+                        throw new NotImplementedException();
                     }
+                }
+                else
+                {
+                    instructions.AddRange(Callee.Compile());
+
+                    instructions.Add(new BuildExternalLambdaInstruction(ExternalMethodGroup));
+                    instructions.Add(new ExternalCallInstruction(argumentLocations));
                 }
             }
 
             return instructions;
+        }
+
+        private void CompileCallNoCallee(
+            List<Instruction> instructions, 
+            RedwoodType[] argumentTypes,
+            int[] argumentLocations,
+            RedwoodType knownType)
+        {
+            if (knownType == null)
+            {
+                instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
+            }
+            else if (knownType.CSharpType == typeof(InternalLambda))
+            {
+                instructions.Add(new InternalCallInstruction(argumentLocations));
+            }
+            else if (knownType.CSharpType == typeof(ExternalLambda))
+            {
+                instructions.Add(new ExternalCallInstruction(argumentLocations));
+            }
+            else if (knownType.CSharpType == typeof(LambdaGroup))
+            {
+                if (FullyResolved && knownType.GenericArguments != null)
+                {
+                    RuntimeUtil.TrySelectOverload(
+                        argumentTypes,
+                        knownType.GenericArguments
+                            .Select(lambdaType => lambdaType
+                                .GenericArguments
+                                .SkipLast(1)
+                                .ToArray()
+                            )
+                            .ToArray(),
+                        out int index
+                    );
+                    instructions.Add(new LookupLambdaGroupOverloadInstruction(index));
+                    instructions.Add(new ExternalCallInstruction(argumentLocations));
+                }
+                else
+                {
+                    instructions.Add(new TryCallInstruction(argumentTypes, argumentLocations));
+                }
+            }
+            else if (knownType.CSharpType == typeof(RedwoodType))
+            {
+                instructions.Add(new LookupExternalMemberLambdaInstruction("Constructor", knownType));
+                instructions.Add(new ExternalCallInstruction(argumentLocations));
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
         }
 
         internal override IEnumerable<NameExpression> Walk()

@@ -36,6 +36,9 @@
     <None Update="FileTests\simple_test.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="FileTests\static_method_test.rwd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="FileTests\static_type_test.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

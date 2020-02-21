@@ -54,12 +54,12 @@ namespace Redwood.Instructions
         }
     }
 
-    class LookupDirectMemberInstruction : Instruction
+    internal class LookupDirectMemberInstruction : Instruction
     {
         // TODO: this will work with inheritance?
         private int slot;
 
-        public LookupDirectMemberInstruction(int slot)
+        internal LookupDirectMemberInstruction(int slot)
         {
             this.slot = slot;
         }
@@ -67,6 +67,24 @@ namespace Redwood.Instructions
         public int Execute(Frame frame)
         {
             frame.result = (frame.result as RedwoodObject).slots[slot];
+            return 1;
+        }
+    }
+
+    internal class LookupDirectStaticMemberInstruction : Instruction
+    {
+        private RedwoodType type;
+        private int index;
+
+        public LookupDirectStaticMemberInstruction(RedwoodType type, int index)
+        {
+            this.type = type;
+            this.index = index;
+        }
+
+        public int Execute(Frame frame)
+        {
+            frame.result = type.staticLambdas[index];
             return 1;
         }
     }
@@ -120,17 +138,15 @@ namespace Redwood.Instructions
             {
                 frame.result = (frame.result as RedwoodObject)[member];
             }
+            else if (MemberResolver.TryResolveLambda(frame.result, knownType, member, out Lambda result))
+            {
+                frame.result = result;
+            }
             else
             {
-                if (MemberResolver.TryResolveLambda(frame.result, knownType, member, out Lambda result))
-                {
-                    frame.result = result;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                throw new NotImplementedException();
             }
+
             return 1;
         }
     }
