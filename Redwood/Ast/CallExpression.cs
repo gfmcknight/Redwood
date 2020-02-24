@@ -72,23 +72,7 @@ namespace Redwood.Ast
             {
                 LambdaType = FunctionName.GetKnownType();
                 // If we have a lambda group, we should try to resolve it
-                if (LambdaType != null &&
-                    LambdaType.CSharpType == typeof(LambdaGroup) &&
-                    FullyResolved &&
-                    (LambdaType.GenericArguments?.Length ?? 0) > 0)
-                {
-                    RuntimeUtil.TrySelectOverload(
-                        argumentTypes,
-                        LambdaType
-                            .GenericArguments
-                            // Ignore the return type from lambdas
-                            .Select(overload =>
-                                overload.GenericArguments.SkipLast(1).ToArray())
-                            .ToArray(),
-                        out int index
-                    );
-                    LambdaType = LambdaType.GenericArguments[index];
-                }
+                ResolveLambdaGroupOverload(argumentTypes);
             }
             else if (Callee.GetKnownType() == null)
             {
@@ -112,6 +96,7 @@ namespace Redwood.Ast
                     {
                         LambdaType = calleeType
                             .GetKnownTypeForStaticMember(FunctionName.Name);
+                        ResolveLambdaGroupOverload(argumentTypes);
                     }
                     else
                     {
@@ -179,6 +164,27 @@ namespace Redwood.Ast
                         returnType,
                         paramTypes);
                 }
+            }
+        }
+
+        private void ResolveLambdaGroupOverload(RedwoodType[] argumentTypes)
+        {
+            if (LambdaType != null &&
+                                LambdaType.CSharpType == typeof(LambdaGroup) &&
+                                FullyResolved &&
+                                (LambdaType.GenericArguments?.Length ?? 0) > 0)
+            {
+                RuntimeUtil.TrySelectOverload(
+                    argumentTypes,
+                    LambdaType
+                        .GenericArguments
+                        // Ignore the return type from lambdas
+                        .Select(overload =>
+                            overload.GenericArguments.SkipLast(1).ToArray())
+                        .ToArray(),
+                    out int index
+                );
+                LambdaType = LambdaType.GenericArguments[index];
             }
         }
 

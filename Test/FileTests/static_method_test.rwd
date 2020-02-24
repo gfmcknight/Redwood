@@ -35,4 +35,14 @@ function testMain(RAssert assert)
     assert.Equal(4, SampleClass.StaticOverload());
     assert.Equal(5, SampleClass.StaticOverload(1));
     assert.Equal(6, SampleClass.StaticOverload("test"));
+
+    assert.Equal(type(int), statictype(TestClass.GetStatic(1)));
+    assert.Equal(type(int), statictype(TestClass.StaticOverload()));
+    assert.Equal(type(int), statictype(TestClass.StaticOverload(1)));
+    assert.Equal(type(int), statictype(TestClass.StaticOverload("test")));
+    assert.Equal(type(int), statictype(SampleClass.GetStatic(1)));
+    assert.Equal(type(int), statictype(SampleClass.StaticOverload()));
+    assert.Equal(type(int), statictype(SampleClass.StaticOverload(1)));
+    assert.Equal(type(int), statictype(SampleClass.StaticOverload("test")));
+
 }
