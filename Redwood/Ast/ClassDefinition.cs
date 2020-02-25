@@ -210,10 +210,11 @@ namespace Redwood.Ast
 
             List<Instruction> instructions = new List<Instruction>();
 
-            instructions.AddRange(new Instruction[]
+            instructions.AddRange(
+                new Instruction[]
                 {
                     new BuildInternalLambdasInstruction(constructorOverloads.ToArray()),
-                    new AssignConstructorLambda(Type),
+                    new AssignConstructorLambdaInstruction(Type),
                     new LoadConstantInstruction(Type),
                     Compiler.CompileVariableAssign(DeclaredVariable)
                 }

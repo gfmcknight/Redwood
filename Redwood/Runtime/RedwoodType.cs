@@ -31,6 +31,7 @@ namespace Redwood.Runtime
         internal RedwoodType[] staticSlotTypes;
         internal Lambda[] staticLambdas;
 
+        public string Name { get; private set; }
         public RedwoodType BaseType { get; private set; }
         public Type CSharpType { get; private set; }
         // TODO: Make this immutable?
@@ -234,6 +235,7 @@ namespace Redwood.Runtime
         internal RedwoodType GetGenericSpecialization(RedwoodType[] genericArgs)
         {
             RedwoodType newType = new RedwoodType();
+            newType.Name = Name;
             newType.CSharpType = CSharpType;
             // TODO: Base type with generic specialization?
             newType.BaseType = BaseType;
@@ -286,6 +288,7 @@ namespace Redwood.Runtime
         private RedwoodType(Type cSharpType)
         {
             CSharpType = cSharpType;
+            Name = CSharpType.Name;
 
             Type[] genericArgs = cSharpType.GenericTypeArguments;
             GenericArguments = new RedwoodType[genericArgs.Length];
@@ -313,6 +316,7 @@ namespace Redwood.Runtime
         internal static RedwoodType Make(ClassDefinition @class)
         {
             RedwoodType type = new RedwoodType();
+            type.Name = @class.Name;
             // TODO: Number of slots?
             return type;
         }

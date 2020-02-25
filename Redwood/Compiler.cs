@@ -260,6 +260,55 @@ namespace Redwood
             }
         }
 
+        internal static IEnumerable<Instruction> CompileImplicitConversion(
+            RedwoodType from,
+            RedwoodType to)
+        {
+            if (to == null)
+            {
+                // If we have a null destination, this shouldn't
+                // even get called; we will be resolving it closer
+                // to runtime
+                throw new ArgumentException("Cannot convert to dynamic type");
+            }
+
+            if (from == null)
+            {
+                return new Instruction[]
+                {
+                    new DynamicConvertInstruction(to)
+                };
+            }
+            else if (to.IsAssignableFrom(from))
+            {
+                // In this case, we are a subtype or the correct type
+                // so we don't need to do anything
+                return new Instruction[0];
+            }
+            else if (from.HasImplicitConversion(to))
+            {
+                if (from.CSharpType == null)
+                {
+                    // TODO: This needs to turn into a direct member lookup
+                    throw new NotImplementedException();
+                }
+
+                // This call won't work on a RedwoodType in the compile phase
+                // because the static lambdas aren't populated yet
+                return new Instruction[] {
+                    new CallWithResultInstruction(
+                        RuntimeUtil.GetConversionLambda(from, to)
+                    )
+                };
+            }
+            else
+            {
+                // Cannot convert between the types
+                throw new NotImplementedException();
+            }
+
+        }
+
         private class ImportDetails
         {
             public string From { get; set; }

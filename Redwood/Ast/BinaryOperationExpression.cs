@@ -112,17 +112,22 @@ namespace Redwood.Ast
 
         private IEnumerable<Instruction> CompileAssign()
         {
+            RedwoodType leftType = Left.GetKnownType();
+            RedwoodType rightType = Right.GetKnownType();
+
             List<Instruction> instructions = new List<Instruction>();
-            if (Left is NameExpression ne)
+            instructions.AddRange(Right.Compile());
+
+            // If leftType == null, then the left must be responsible for
+            // attempting to convert to the correct type
+            if (leftType != null)
             {
-                instructions.AddRange(Right.Compile());
-                instructions.Add(Compiler.CompileVariableAssign(ne.Variable));
+                instructions.AddRange(
+                    Compiler.CompileImplicitConversion(rightType, leftType)
+                );
             }
-            else
-            {
-                // TODO: setting values on members
-                throw new NotImplementedException();
-            }
+
+            instructions.AddRange(Left.CompileAssignmentTarget(TemporaryVariables));
             return instructions.ToArray();
         }
 
@@ -139,7 +144,15 @@ namespace Redwood.Ast
                         {
                             ne.InLVal = true;
                         }
-                        // TODO?
+                        else
+                        {
+                            // Provide a temporary variable to hold the value of the
+                            // assignment where it is needed.
+                            TemporaryVariables.Add(new Variable
+                            {
+                                Temporary = true
+                            });
+                        }
                         break;
                     default:
                         throw new NotImplementedException();
@@ -202,7 +215,8 @@ namespace Redwood.Ast
             return ResolvedOperator?.ReturnType;
         }
 
-        internal override IEnumerable<Instruction> CompileLVal()
+        internal override IEnumerable<Instruction> CompileAssignmentTarget(
+            List<Variable> temporaryVariables)
         {
             throw new NotImplementedException();
         }

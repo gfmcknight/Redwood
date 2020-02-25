@@ -1,0 +1,36 @@
+﻿import Test.RAssert;
+import Test.LLNode;
+
+class ListNode(int value) {
+    let ListNode next;
+}
+
+function testMain(RAssert assert)
+{
+    let ListNode list = ListNode(1);
+    list.next = ListNode(2);
+    list.next.next = ListNode(3);
+    list.next.next.next = ListNode(4);
+
+    assert.Equal(1, list.value);
+    assert.Equal(2, list.next.value);
+    assert.Equal(3, list.next.next.value);
+    assert.Equal(4, list.next.next.next.value);
+
+    list.next.next.next.value = 6;
+    assert.Equal(6, list.next.next.next.value);
+
+
+    let LLNode linked_list = LLNode(1);
+    linked_list.next = LLNode(2);
+    linked_list.next.next = LLNode(3);
+    linked_list.next.next.next = LLNode(4);
+
+    assert.Equal(1, linked_list.Value);
+    assert.Equal(2, linked_list.next.Value);
+    assert.Equal(3, linked_list.next.next.Value);
+    assert.Equal(4, linked_list.next.next.next.Value);
+
+    linked_list.next.next.next.Value = 6;
+    assert.Equal(6, linked_list.next.next.next.Value);
+}

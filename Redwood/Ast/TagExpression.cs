@@ -19,7 +19,8 @@ namespace Redwood.Ast
             return new Instruction[] { new TagInstruction(Tag.Value) };
         }
 
-        internal override IEnumerable<Instruction> CompileLVal()
+        internal override IEnumerable<Instruction> CompileAssignmentTarget(
+            List<Variable> temporaryVariables)
         {
             throw new NotImplementedException();
         }

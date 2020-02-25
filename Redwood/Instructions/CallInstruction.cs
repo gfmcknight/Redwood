@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using Redwood.Runtime;
 
@@ -125,6 +126,21 @@ namespace Redwood.Instructions
             {
                 frame.result = lambda.Run(args);
             }
+            return 1;
+        }
+    }
+
+    internal class CallWithResultInstruction : Instruction
+    {
+        private Lambda lambda;
+        public CallWithResultInstruction(Lambda lambda)
+        {
+            this.lambda = lambda;
+        }
+
+        public int Execute(Frame frame)
+        {
+            frame.result = lambda.Run(frame.result);
             return 1;
         }
     }

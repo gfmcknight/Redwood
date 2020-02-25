@@ -79,9 +79,64 @@ namespace Redwood.Ast
             return KnownType;
         }
 
-        internal override IEnumerable<Instruction> CompileLVal()
+        internal override IEnumerable<Instruction> CompileAssignmentTarget(
+            List<Variable> temporaryVariables)
         {
-            throw new NotImplementedException();
+            List<Instruction> instructions = new List<Instruction>();
+            instructions.Add(Compiler.CompileVariableAssign(temporaryVariables[0]));
+            instructions.AddRange(Chain.Compile());
+
+            RedwoodType chainType = Chain.GetKnownType();
+            if (chainType == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            if (chainType.CSharpType == null)
+            {
+                int slot = chainType.slotMap[Element.Name];
+                instructions.Add(
+                    new AssignDirectMemberInstruction(
+                        slot,
+                        temporaryVariables[0].Location
+                    )
+                );
+            }
+            else
+            {
+                PropertyInfo property;
+                FieldInfo field;
+                MemberResolver.TryResolveMember(
+                    chainType,
+                    Element.Name,
+                    false,
+                    out property,
+                    out field);
+
+                if (property != null)
+                {
+                    instructions.Add(
+                        new AssignExternalPropertyInstruction(
+                            property,
+                            temporaryVariables[0].Location
+                        )
+                    );
+                }
+
+                if (field != null)
+                {
+                    instructions.Add(
+                        new AssignExternalFieldInstruction(
+                            field,
+                            temporaryVariables[0].Location
+                        )
+                    );
+                }
+            }
+
+            // We have to satisfy that (x.y = 3) == 3
+            instructions.Add(Compiler.CompileVariableLookup(temporaryVariables[0]));
+            return instructions;
         }
     }
 }

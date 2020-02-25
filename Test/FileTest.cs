@@ -20,6 +20,7 @@ namespace Test
         [InlineData("module_test.rwd")]
         [InlineData("interop_test.rwd")]
         [InlineData("static_method_test.rwd")]
+        [InlineData("linked_list_test.rwd")]
         public async void RunTestFromFile(string filename)
         {
             Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());

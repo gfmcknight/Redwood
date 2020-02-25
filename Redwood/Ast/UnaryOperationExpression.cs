@@ -33,7 +33,8 @@ namespace Redwood.Ast
             throw new NotImplementedException();
         }
 
-        internal override IEnumerable<Instruction> CompileLVal()
+        internal override IEnumerable<Instruction> CompileAssignmentTarget(
+            List<Variable> temporaryVariables)
         {
             throw new NotImplementedException();
         }

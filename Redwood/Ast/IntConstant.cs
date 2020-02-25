@@ -62,7 +62,8 @@ namespace Redwood.Ast
             return new NameExpression[0];
         }
 
-        internal override IEnumerable<Instruction> CompileLVal()
+        internal override IEnumerable<Instruction> CompileAssignmentTarget(
+            List<Variable> temporaryVariables)
         {
             throw new NotImplementedException();
         }

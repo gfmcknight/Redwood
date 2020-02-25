@@ -389,7 +389,8 @@ namespace Redwood.Ast
             return signature[signature.Length - 1];
         }
 
-        internal override IEnumerable<Instruction> CompileLVal()
+        internal override IEnumerable<Instruction> CompileAssignmentTarget(
+            List<Variable> temporaryVariables)
         {
             throw new NotImplementedException();
         }

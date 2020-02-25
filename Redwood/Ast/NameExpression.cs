@@ -51,9 +51,13 @@ namespace Redwood.Ast
             return Variable?.KnownType;
         }
 
-        internal override IEnumerable<Instruction> CompileLVal()
+        internal override IEnumerable<Instruction> CompileAssignmentTarget(
+            List<Variable> temporaryVariables)
         {
-            throw new NotImplementedException();
+            return new Instruction[]
+            {
+                Compiler.CompileVariableAssign(Variable)
+            };
         }
     }
 }

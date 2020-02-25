@@ -276,5 +276,35 @@ namespace Redwood.Runtime
                 return new LambdaGroup(flattened.ToArray());
             }
         }
+
+        internal static Lambda GetConversionLambda(RedwoodType from, RedwoodType to)
+        {
+            if (from.CSharpType == null)
+            {
+                // TODO: RedwoodType implicit conversions
+                throw new NotImplementedException();
+            }
+            else if (to.CSharpType == null)
+            {
+                // CSharp type -> Redwood type
+                // This shouldn't happen, I think?
+                throw new NotImplementedException();
+            }
+            else
+            {
+                IEnumerable<MethodInfo> implicits =
+                    from.CSharpType.GetTypeInfo().GetDeclaredMethods("op_Implicit");
+                MethodInfo conversion = implicits
+                    .Where(method => method.ReturnType == to.CSharpType)
+                    .FirstOrDefault();
+
+                if (conversion == null)
+                {
+                    throw new NotImplementedException();
+                }
+
+                return new ExternalLambda(null, conversion);
+            }
+        }
     }
 }

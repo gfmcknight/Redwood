@@ -69,4 +69,15 @@ namespace Test
         public int f(int a, string b) { return 47; }
         public int f(dynamic a, int b) { return 48; }
     }
+
+    public class LLNode
+    {
+        public int Value { get; set; }
+        public LLNode next;
+
+        public LLNode(int value)
+        {
+            Value = value;
+        }
+    }
 }

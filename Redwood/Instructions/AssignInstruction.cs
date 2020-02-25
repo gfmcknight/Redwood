@@ -1,6 +1,7 @@
 ﻿using Redwood.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace Redwood.Instructions
@@ -56,17 +57,62 @@ namespace Redwood.Instructions
     internal class AssignDirectMemberInstruction : Instruction
     {
         private int slot;
+        private int valueLocation;
+
+        public AssignDirectMemberInstruction(int slot, int valueLocation)
+        {
+            this.slot = slot;
+            this.valueLocation = valueLocation;
+        }
 
         public int Execute(Frame frame)
         {
-            throw new NotImplementedException();
+            (frame.result as RedwoodObject).slots[slot] = frame.stack[valueLocation];
+            return 1;
         }
     }
 
-    internal class AssignConstructorLambda : Instruction
+    internal class AssignExternalFieldInstruction : Instruction
+    {
+        private FieldInfo info;
+        private int valueLocation;
+
+        public AssignExternalFieldInstruction(FieldInfo info, int valueLocation)
+        {
+            this.info = info;
+            this.valueLocation = valueLocation;
+        }
+
+        public int Execute(Frame frame)
+        {
+            info.SetValue(frame.result, frame.stack[valueLocation]);
+            return 1;
+        }
+    }
+
+    internal class AssignExternalPropertyInstruction : Instruction
+    {
+        private PropertyInfo info;
+        private int valueLocation;
+
+        public AssignExternalPropertyInstruction(PropertyInfo info, int valueLocation)
+        {
+            this.info = info;
+            this.valueLocation = valueLocation;
+        }
+
+        public int Execute(Frame frame)
+        {
+            info.SetValue(frame.result, frame.stack[valueLocation]);
+            return 1;
+        }
+    }
+
+
+    internal class AssignConstructorLambdaInstruction : Instruction
     {
         RedwoodType type;
-        internal AssignConstructorLambda(RedwoodType type)
+        internal AssignConstructorLambdaInstruction(RedwoodType type)
         {
             this.type = type;
         }
