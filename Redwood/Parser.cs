@@ -582,6 +582,12 @@ namespace Redwood
                 return statement;
             }
 
+            statement = await ParseForStatement();
+            if (statement != null)
+            {
+                return statement;
+            }
+
             statement = await ParseExpression();
             if (statement != null)
             {
@@ -653,6 +659,57 @@ namespace Redwood
                 Condition = condition,
                 PathTrue = pathTrue,
                 ElseStatement = elseStatement
+            };
+        }
+
+        private async Task<ForStatement> ParseForStatement()
+        {
+            if (!await MaybeToken("for", true))
+            {
+                return null;
+            }
+
+            if (!await MaybeToken("(", false))
+            {
+                throw new NotImplementedException();
+            }
+
+            Statement initializer = await ParseLetDefinition();
+            if (initializer == null)
+            {
+                initializer = await ParseExpression();
+                if (!await MaybeToken(";", false))
+                {
+                    throw new NotImplementedException();
+                }
+            }
+
+            Expression condition = await ParseExpression();
+            if (!await MaybeToken(";", false))
+            {
+                throw new NotImplementedException();
+            }
+
+            Expression incrementor = await ParseExpression();
+            if (!await MaybeToken(")", false))
+            {
+                throw new NotImplementedException();
+            }
+
+            BlockStatement body = await ParseBlock();
+            if (body == null)
+            {
+                // TODO: Does this allow single semicolon for
+                // loops? Should they be allowed?
+                throw new NotImplementedException();
+            }
+
+            return new ForStatement
+            {
+                Initializer = initializer,
+                Condition = condition,
+                Incrementor = incrementor,
+                Body = body
             };
         }
 

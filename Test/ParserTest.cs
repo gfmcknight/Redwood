@@ -335,5 +335,24 @@ function<int> test_func()
             Lambda lambda = await MakeLambda(code);
             Assert.Equal(2, lambda.Run());
         }
+
+        [Fact]
+        public async Task CanUseForLoops()
+        {
+            List<int> things = new List<int>();
+            string code = @"
+function<int> test_func(? list)
+{
+    for (let int i = 0; i < 10; i = i + 1)
+    {
+        list.Add(i);
+    }
+    return 1;
+}";
+
+            Lambda lambda = await MakeLambda(code);
+            Assert.Equal(1, lambda.Run(things));
+            Assert.Equal(10, things.Count);
+        }
     }
 }
