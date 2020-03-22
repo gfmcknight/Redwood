@@ -10,6 +10,18 @@ namespace Test
     {
         public int AssertionsCount { get; private set; }
 
+        public void True(bool condition)
+        {
+            AssertionsCount++;
+            Assert.True(condition);
+        }
+
+        public void False(bool condition)
+        {
+            AssertionsCount++;
+            Assert.False(condition);
+        }
+
         public void Equal(object expected, object actual)
         {
             AssertionsCount++;

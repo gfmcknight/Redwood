@@ -172,21 +172,51 @@ namespace Redwood.Instructions
             this.leftKnownType = leftKnownType;
             this.rightKnownType = rightKnownType;
         }
+
         public int Execute(Frame frame)
         {
-            Lambda lambda;
-            if (!MemberResolver.TryResolveOperator(
-                frame.stack[leftIndex],
-                frame.stack[rightIndex],
-                leftKnownType,
-                rightKnownType,
-                op,
-                out lambda))
-            {
-                throw new NotImplementedException();
-            }
+            RedwoodType leftType = leftKnownType ?? RuntimeUtil.GetTypeOf(frame.stack[leftIndex]);
+            RedwoodType rightType = rightKnownType ?? RuntimeUtil.GetTypeOf(frame.stack[rightIndex]);
+
+            string lambdaName = RuntimeUtil.NameForOperator(op);
+            Lambda leftLambda;
+            Lambda rightLambda;
+
+            leftLambda = ResolveLambda(leftType, lambdaName);
+            rightLambda = ResolveLambda(rightType, lambdaName);
+
+            Lambda lambda = RuntimeUtil.CanonicalizeLambdas(leftLambda, rightLambda);
+            lambda = RuntimeUtil.SelectSingleOverload(
+                new RedwoodType[] { leftType, rightType },
+                lambda
+            );
+            
             frame.result = lambda;
             return 1;
+
+            Lambda ResolveLambda(RedwoodType type, string lambdaName)
+            {
+                Lambda lambda;
+                if (type.CSharpType == null)
+                {
+                    int slot = type.staticSlotMap.GetValueOrDefault(lambdaName, -1);
+
+                    if (slot == -1)
+                    {
+                        lambda = null;
+                    }
+                    else
+                    {
+                        lambda = type.staticLambdas[slot];
+                    }
+                }
+                else
+                {
+                    MemberResolver.TryResolveLambda(null, type, lambdaName, out lambda);
+                }
+
+                return lambda;
+            }
         }
     }
 

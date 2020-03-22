@@ -1,0 +1,68 @@
+﻿import Test.RAssert;
+
+class OperatorTest(int val)
+{
+    operator<OperatorTest> +(OperatorTest a, OperatorTest b)
+    {
+        return OperatorTest(a.val + b.val);
+    }
+
+    operator<OperatorTest> +(int a, OperatorTest b)
+    {
+        return OperatorTest(a + b.val);
+    }
+
+    operator<OperatorTest> +(OperatorTest a, int b)
+    {
+        return OperatorTest(a.val + b);
+    }
+
+    operator<bool> ==(OperatorTest a, int b)
+    {
+        return a.val == b;
+    }
+
+    operator<bool> ==(OperatorTest a, OperatorTest b)
+    {
+        return a.val == b.val;
+    }
+
+    operator<bool> ==(int a, OperatorTest b)
+    {
+        return a == b.val;
+    }
+}
+
+function<int> testMain(RAssert assert)
+{
+    let OperatorTest a = OperatorTest(6);
+    let OperatorTest b = OperatorTest(11);
+    assert.False(a == b);
+    assert.True(a == a);
+    assert.True(b == b);
+
+    assert.True(a == 6);
+    assert.True(6 == a);
+    assert.False(a == 7);
+    assert.False(7 == a);
+
+    assert.Equal(17, (a + b).val);
+    assert.Equal(7, (a + 1).val);
+    assert.Equal(16, (b + 5).val);
+    assert.Equal(7, (1 + a).val);
+    assert.Equal(16, (5 + b).val);
+
+    let ? c = OperatorTest(6);
+    assert.True(a == c);
+    assert.True(c == a);
+    assert.False(b == c);
+    assert.False(c == b);
+
+    c = 6;
+    assert.True(a == c);
+    assert.True(c == a);
+    assert.False(b == c);
+    assert.False(c == b);
+
+    return 1;
+}

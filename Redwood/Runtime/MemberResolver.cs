@@ -67,9 +67,6 @@ namespace Redwood.Runtime
             string name,
             out Lambda result)
         {
-            bool @static = target == null || target is RedwoodType;
-
-
             if (TryResolveMethod(target, targetTypeHint, name, target == null, out MethodInfo[] group))
             {
                 if (group.Length == 1)

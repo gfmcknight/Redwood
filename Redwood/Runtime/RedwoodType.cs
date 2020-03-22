@@ -227,8 +227,9 @@ namespace Redwood.Runtime
             }
             else
             {
-                // TODO!
-                throw new NotImplementedException("Handling of unfound slots");
+                // Retrun a sentinel value so we can count the lambda as
+                // not found.
+                return -1;
             }
         }
 
@@ -250,7 +251,7 @@ namespace Redwood.Runtime
         }
 
         internal static RedwoodType GetForLambdaArgsTypes(
-            Type type,
+            Type type, // ExternalLambda, InternalLambda, etc
             RedwoodType returnType,
             RedwoodType[] paramTypes)
         {
@@ -281,6 +282,7 @@ namespace Redwood.Runtime
 
         private RedwoodType()
         {
+            implicitConversionMap = new Dictionary<RedwoodType, int>();
             overloadsMap = new Dictionary<int, Tuple<RedwoodType[][], int[]>>();
             // TODO: RedwoodType for void only?
         }

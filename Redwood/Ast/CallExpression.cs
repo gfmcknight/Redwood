@@ -38,7 +38,6 @@ namespace Redwood.Ast
             
             binder.Checkout();
 
-
             bool fullyResolvedTypes;
             if (Callee == null)
             {

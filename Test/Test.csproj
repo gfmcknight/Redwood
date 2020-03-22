@@ -33,6 +33,9 @@
     <None Update="FileTests\module_test_a.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="FileTests\operator_test.rwd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="FileTests\overload_test.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

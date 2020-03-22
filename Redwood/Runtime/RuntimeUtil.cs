@@ -306,5 +306,17 @@ namespace Redwood.Runtime
                 return new ExternalLambda(null, conversion);
             }
         }
+
+        internal static RedwoodType GetTypeOf(object o)
+        {
+            if (o is RedwoodObject rwo)
+            {
+                return rwo.Type;
+            }
+            else
+            {
+                return RedwoodType.GetForCSharpType(o.GetType());
+            }
+        }
     }
 }

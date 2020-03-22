@@ -60,6 +60,7 @@ namespace Redwood
         static Parser()
         {
             binaryOpParsers = new List<BinaryOpGroupParser>();
+
             // Assign - TODO this is the wrong association direction
             binaryOpParsers.Add(
                 new BinaryOpGroupParser(new BinaryOpSpec("=", BinaryOperator.Assign, false))
@@ -172,6 +173,32 @@ namespace Redwood
                     return await next.Parse(owner);
                 }
             }
+
+            public async Task<BinaryOperator?> ParseLoneOperatorSymbol(Parser owner)
+            {
+
+                BinaryOperator? result = null;
+                if (next != null)
+                {
+                    result = await next.ParseLoneOperatorSymbol(owner);
+                }
+
+                if (result != null)
+                {
+                    return result;
+                }
+
+                foreach (BinaryOpSpec op in operators)
+                {
+                    if (await owner.MaybeToken(op.token, op.alphaNum))
+                    {
+                        return op.op;
+                    }
+                }
+
+                return null;
+            }
+
             public async Task<Expression> Parse(Parser owner)
             {
                 Expression leftMost = await ParseNext(owner);
@@ -338,6 +365,12 @@ namespace Redwood
                 }
 
                 function = await ParseFunctionDefinition();
+                
+                if (function == null)
+                {
+                    function = await ParseOperatorDefinition();
+                }
+                
                 if (function != null)
                 {
                     function.ClassMethod = true;
@@ -504,6 +537,82 @@ namespace Redwood
                 Parameters = parameters,
                 Body = functionCode
                 // TODO: Return type?
+            };
+        }
+
+        public async Task<FunctionDefinition> ParseOperatorDefinition()
+        {
+            if (!await MaybeToken("operator", true))
+            {
+                return null;
+            }
+
+            TypeSyntax returnType;
+            if (await MaybeToken("<", false))
+            {
+                returnType = await ParseType();
+                if (!await MaybeToken(">", false))
+                {
+                    throw new NotImplementedException();
+                }
+            }
+            else
+            {
+                returnType = null;
+            }
+
+            string operatorName = null;
+
+            BinaryOperator? binaryOperator = 
+                await binaryOpParsers[0].ParseLoneOperatorSymbol(this);
+            if (binaryOperator != null)
+            {
+                operatorName = RuntimeUtil.NameForOperator(binaryOperator.Value);
+            }
+
+            // TODO: Unary operators, implicit operator
+
+            if (operatorName == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            if (!await MaybeToken("(", false))
+            {
+                throw new NotImplementedException();
+            }
+
+            ParameterDefinition[] parameters;
+            if (await MaybeToken(")", false))
+            {
+                parameters = new ParameterDefinition[0];
+            }
+            else
+            {
+                parameters = await ParseParameterList();
+                if (parameters == null)
+                {
+                    throw new NotImplementedException();
+                }
+                if (!await MaybeToken(")", false))
+                {
+                    throw new NotImplementedException();
+                }
+            }
+
+            BlockStatement functionCode = await ParseBlock();
+            if (functionCode == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            return new FunctionDefinition
+            {
+                Name = operatorName,
+                Parameters = parameters,
+                Body = functionCode,
+                ReturnType = returnType,
+                Static = true
             };
         }
 
@@ -827,7 +936,6 @@ namespace Redwood
             }
             return null;
         }
-
 
         private async Task<Expression> ParsePrimaryTailExpression()
         {
