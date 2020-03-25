@@ -1145,22 +1145,6 @@ namespace Redwood
                         };
                     }
                 }
-                else if (await MaybeToken("++", false))
-                {
-                    leftMost = new UnaryOperationExpression
-                    {
-                        InnerExpression = leftMost,
-                        Operator = UnaryOperator.PostIncrement
-                    };
-                }
-                else if (await MaybeToken("--", false))
-                {
-                    leftMost = new UnaryOperationExpression
-                    {
-                        InnerExpression = leftMost,
-                        Operator = UnaryOperator.PostDecrement
-                    };
-                }
                 else
                 {
                     return leftMost;

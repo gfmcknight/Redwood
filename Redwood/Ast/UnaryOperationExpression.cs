@@ -7,14 +7,8 @@ namespace Redwood.Ast
 {
     public enum UnaryOperator
     {
-        PostIncrement,
-        PreIncrement,
-        PostDecrement,
-        PreDecrement,
         Negative,
-        Positive,
         BitwiseNegate,
-        Parity,
         Await
     }
 
