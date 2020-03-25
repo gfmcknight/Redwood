@@ -17,6 +17,7 @@ namespace Redwood.Ast
         public FunctionDefinition[] Methods { get; set; }
         public FunctionDefinition[] StaticMethods { get; set; }
         internal RedwoodType Type { get; set; }
+        internal Variable This { get; set; }
         internal List<Variable> MemberVariables { get; set; }
         internal List<Variable> TempArgumentVariables { get; set; }
         internal List<Instruction> ConstructorBase { get; set; }
@@ -79,6 +80,8 @@ namespace Redwood.Ast
                 constructor.Bind(binder);
             }
 
+            binder.BindVariable(This);
+
             foreach (LetDefinition field in InstanceFields)
             {
                 field.Bind(binder);
@@ -129,6 +132,8 @@ namespace Redwood.Ast
         internal List<Instruction> CompileConstructor(FunctionDefinition constructor)
         {
             List<Instruction> instructions = new List<Instruction>();
+            instructions.Add(new BuildRedwoodObjectFromClosureInstruction(Type));
+            instructions.Add(Compiler.CompileVariableAssign(This));
 
             if (ConstructorBase == null)
             {
@@ -176,7 +181,7 @@ namespace Redwood.Ast
                 instructions.Add(new InternalCallInstruction(argLocations));
             }
 
-            instructions.Add(new BuildRedwoodObjectFromClosureInstruction(Type));
+            instructions.Add(Compiler.CompileVariableLookup(This));
             instructions.Add(new ReturnInstruction());
             return instructions;
         }
@@ -240,6 +245,13 @@ namespace Redwood.Ast
             List<NameExpression> freeVars = new List<NameExpression>();
             List<Variable> declaredVars = new List<Variable>();
             int maxConstructorArgs = 0;
+
+            This = new Variable
+            {
+                Name = "this",
+                KnownType = Type
+            };
+            declaredVars.Add(This);
 
             if (ParameterFields != null)
             {

@@ -10,7 +10,7 @@ class TestClass(
     constructor(int value)
     {
         paramA = value;
-        paramB = value;
+        this.paramB = value;
     }
 }
 
@@ -27,6 +27,7 @@ function<int> testMain(RAssert assert)
     assert.Equal(6, tc.field);
 
     assert.Equal(TestClass, statictype(tc));
+    assert.Equal(TestClass, statictype(tc.this));
 
     return 0;
 }

@@ -63,20 +63,6 @@ namespace Redwood.Runtime
             );
 
             intOperators.Add(
-                new OperatorDescriptor(UnaryOperator.Parity),
-                new InPlaceLambda(unaryOperatorsType, type,
-                    (object[] stack, int[] locs) => ^(int)stack[locs[0]]
-                )
-            );
-
-            intOperators.Add(
-                new OperatorDescriptor(UnaryOperator.Positive),
-                new InPlaceLambda(unaryOperatorsType, type,
-                    (object[] stack, int[] locs) => +(int)stack[locs[0]]
-                )
-            );
-
-            intOperators.Add(
                 new OperatorDescriptor(UnaryOperator.Negative),
                 new InPlaceLambda(unaryOperatorsType, type,
                     (object[] stack, int[] locs) => -(int)stack[locs[0]]
@@ -234,13 +220,6 @@ namespace Redwood.Runtime
 
             Dictionary<OperatorDescriptor, Lambda> doubleOperators =
                 new Dictionary<OperatorDescriptor, Lambda>();
-
-            doubleOperators.Add(
-                new OperatorDescriptor(UnaryOperator.Positive),
-                new InPlaceLambda(unaryOperatorsType, type,
-                    (object[] stack, int[] locs) => +(double)stack[locs[0]]
-                )
-            );
 
             doubleOperators.Add(
                 new OperatorDescriptor(UnaryOperator.Negative),
