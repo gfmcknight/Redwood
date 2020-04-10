@@ -64,5 +64,13 @@ function<int> testMain(RAssert assert)
     assert.False(b == c);
     assert.False(c == b);
 
+    assert.True(null == null);
+    assert.False(3 == null);
+    assert.False(null == 3);
+
+    assert.False(null != null);
+    assert.True(3 != null);
+    assert.True(null != 3);
+
     return 1;
 }

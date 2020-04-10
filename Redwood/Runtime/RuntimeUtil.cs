@@ -36,7 +36,7 @@ namespace Redwood.Runtime
                 case BinaryOperator.GreaterThanOrEquals:
                     return "op_GreaterThanOrEqual";
                 case BinaryOperator.Equals:
-                    return "op_GreaterThanOrEqual";
+                    return "op_Equality";
                 case BinaryOperator.NotEquals:
                     return "op_Inequality";
                 case BinaryOperator.BitwiseAnd:
@@ -309,7 +309,11 @@ namespace Redwood.Runtime
 
         internal static RedwoodType GetTypeOf(object o)
         {
-            if (o is RedwoodObject rwo)
+            if (o == null)
+            {
+                return null;
+            }
+            else if (o is RedwoodObject rwo)
             {
                 return rwo.Type;
             }

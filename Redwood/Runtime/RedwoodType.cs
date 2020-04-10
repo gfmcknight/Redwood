@@ -16,6 +16,7 @@ namespace Redwood.Runtime
         internal static Dictionary<ImmutableList<RedwoodType>, List<RedwoodType>> lambdaTypes =
             new Dictionary<ImmutableList<RedwoodType>, List<RedwoodType>>();
         public static RedwoodType Void = new RedwoodType();
+        public static RedwoodType NullType = new RedwoodType();
 
         // Name of member/method -> slot number
         internal Dictionary<string, int> slotMap;
@@ -48,6 +49,41 @@ namespace Redwood.Runtime
             specialMappedTypes.Add("double", GetForCSharpType(typeof(double)));
             specialMappedTypes.Add("bool", GetForCSharpType(typeof(bool)));
             specialMappedTypes.Add("object", GetForCSharpType(typeof(object)));
+
+            NullType.staticSlotMap = new Dictionary<string, int>();
+            NullType.staticSlotMap[RuntimeUtil.NameForOperator(BinaryOperator.Equals)] = 0;
+            NullType.staticSlotMap[RuntimeUtil.NameForOperator(BinaryOperator.NotEquals)] = 1;
+            NullType.staticSlotTypes = new RedwoodType[]
+            {
+                RedwoodType.GetForLambdaArgsTypes(
+                    typeof(InPlaceLambda),
+                    RedwoodType.GetForCSharpType(typeof(bool)),
+                    new RedwoodType[] { null , null }
+                ),
+                RedwoodType.GetForLambdaArgsTypes(
+                    typeof(InPlaceLambda),
+                    RedwoodType.GetForCSharpType(typeof(bool)),
+                    new RedwoodType[] { null , null }
+                )
+            };
+
+            NullType.staticLambdas = new Lambda[] {
+                new InPlaceLambda(
+                    new RedwoodType[] { null , null },
+                    GetForCSharpType(typeof(bool)),
+                    new InPlaceLambdaExecutor((stack, locs) => {
+                        return stack[locs[0]] == null && stack[locs[1]] == null;
+                    })
+                ),
+                new InPlaceLambda(
+                    new RedwoodType[] { null , null },
+                    GetForCSharpType(typeof(bool)),
+                    new InPlaceLambdaExecutor((stack, locs) => {
+                        return stack[locs[0]] != null || stack[locs[1]] != null;
+                    })
+                )
+            };
+
         }
 
         public static RedwoodType GetForCSharpType(Type type)
@@ -70,6 +106,12 @@ namespace Redwood.Runtime
 
         public bool IsAssignableFrom(RedwoodType type)
         {
+            // Any type of variable can be filled with null
+            if (type == NullType)
+            {
+                return true;
+            }
+
             if (GenericArguments != null)
             {
                 if (type.GenericArguments != null &&
@@ -173,7 +215,7 @@ namespace Redwood.Runtime
             return type == typeof(int) ||
                    type == typeof(string) ||
                    type == typeof(bool) ||
-                   type == typeof(double); 
+                   type == typeof(double);
         }
 
         internal static bool TryGetSpecialMappedType(string name, out RedwoodType type)

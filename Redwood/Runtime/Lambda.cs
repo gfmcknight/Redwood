@@ -99,7 +99,8 @@ namespace Redwood.Runtime
                 {
                     throw new ArgumentException("Too few arguments");
                 }
-                if (!argsEnumerator.Current.IsAssignableFrom(args[i]))
+                if (argsEnumerator.Current != null &&
+                    !argsEnumerator.Current.IsAssignableFrom(args[i]))
                 {
                     throw new ArgumentException("Invalid argument type " + args[i].ToString());
                 }
@@ -148,7 +149,8 @@ namespace Redwood.Runtime
             {
                 argLocations[i] = i;
 
-                if (!argumentTypes[i].IsAssignableFrom(args[i]))
+                if (argumentTypes[i] != null &&
+                    !argumentTypes[i].IsAssignableFrom(args[i]))
                 {
                     throw new ArgumentException("Invalid argument type " + args[i].ToString());
                 }

@@ -19,7 +19,6 @@ function<int> testMain(RAssert assert)
     assert.Equal(type(int), statictype(tc.postIncrement()));
 
     let ? var;
-    assert.Equal(null, statictype(null));
     assert.Equal(null, statictype(var));
     assert.Equal(type(?), statictype(var));
 
