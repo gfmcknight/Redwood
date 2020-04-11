@@ -118,5 +118,49 @@ function<int> testMain(RAssert assert)
     assert.Equal(6, 5 ^ 3);
     assert.Equal(7, 5 | 3);
 
+    let int calledA = 0;
+    let int calledB = 0;
+    function reset() {
+        calledA = 0;
+        calledB = 0;
+    }
+
+    function<bool> funcA() {
+        calledA = calledA + 1;
+        return true;
+    }
+
+    function<bool> funcB() {
+        calledB = calledB + 1;
+        return false;
+    }
+
+    assert.True(funcA() && funcA());
+    assert.Equal(2, calledA);
+    reset();
+
+    assert.True(funcA() || funcA());
+    assert.Equal(1, calledA);
+    reset();
+
+    assert.False(funcA() && funcB());
+    assert.Equal(1, calledA);
+    assert.Equal(1, calledB);
+    reset();
+
+    assert.True(funcB() || funcA());
+    assert.Equal(1, calledA);
+    assert.Equal(1, calledB);
+    reset();
+
+    assert.False(funcB() && funcA());
+    assert.Equal(0, calledA);
+    assert.Equal(1, calledB);
+    reset();
+
+    assert.True(funcA() || funcB());
+    assert.Equal(1, calledA);
+    assert.Equal(0, calledB);
+
     return 1;
 }

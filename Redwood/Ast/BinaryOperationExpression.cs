@@ -53,6 +53,9 @@ namespace Redwood.Ast
                 {
                     case BinaryOperator.Assign:
                         return CompileAssign();
+                    case BinaryOperator.LogicalAnd:
+                    case BinaryOperator.LogicalOr:
+                        return CompileLogicalExpression();
                     default:
                         break;
                 }
@@ -165,6 +168,52 @@ namespace Redwood.Ast
             return instructions.ToArray();
         }
 
+        private IEnumerable<Instruction> CompileLogicalExpression()
+        {
+            List<Instruction> instructions = new List<Instruction>();
+            instructions.AddRange(Left.Compile());
+            if (Left.GetKnownType() != RedwoodType.GetForCSharpType(typeof(bool)))
+            {
+                instructions.AddRange(
+                    Compiler.CompileImplicitConversion(
+                        Left.GetKnownType(),
+                        RedwoodType.GetForCSharpType(typeof(bool))
+                    )
+                );
+            }
+
+            List<Instruction> rightInstructions = new List<Instruction>();
+            rightInstructions.AddRange(Right.Compile());
+            if (Right.GetKnownType() != RedwoodType.GetForCSharpType(typeof(bool)))
+            {
+                instructions.AddRange(
+                    Compiler.CompileImplicitConversion(
+                        Right.GetKnownType(),
+                        RedwoodType.GetForCSharpType(typeof(bool))
+                    )
+                );
+            }
+
+            // Short circuiting
+            switch(Operator)
+            {
+                case BinaryOperator.LogicalAnd:
+                    // If we get a true, then don't skip the second condition
+                    instructions.Add(new ConditionalJumpInstruction(2));
+                    instructions.Add(new JumpInstruction(rightInstructions.Count + 1));
+                    break;
+                case BinaryOperator.LogicalOr:
+                    instructions.Add(new ConditionalJumpInstruction(rightInstructions.Count + 1));
+                    break;
+                default:
+                    // Should not happen
+                    throw new NotImplementedException();
+            }
+
+            instructions.AddRange(rightInstructions);
+            return instructions;
+        }
+
         internal override IEnumerable<NameExpression> Walk()
         {
             ReflectedOperatorName = RuntimeUtil.NameForOperator(Operator);
@@ -187,6 +236,10 @@ namespace Redwood.Ast
                                 Temporary = true
                             });
                         }
+                        break;
+                    case BinaryOperator.LogicalAnd:
+                    case BinaryOperator.LogicalOr:
+                        // No temporary variables needed
                         break;
                     default:
                         throw new NotImplementedException();

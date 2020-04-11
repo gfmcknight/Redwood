@@ -70,15 +70,6 @@ namespace Redwood
             binaryOpParsers.Add(
                 new BinaryOpGroupParser(new BinaryOpSpec("??", BinaryOperator.Coalesce, false))
             );
-
-            // Logical Or
-            binaryOpParsers.Add(
-                new BinaryOpGroupParser(new BinaryOpSpec("||", BinaryOperator.LogicalOr, false))
-            );
-            // Logical And
-            binaryOpParsers.Add(
-                new BinaryOpGroupParser(new BinaryOpSpec("&&", BinaryOperator.LogicalAnd, false))
-            );
             // Bitwise Or
             binaryOpParsers.Add(
                 new BinaryOpGroupParser(new BinaryOpSpec("|", BinaryOperator.BitwiseOr, false))
@@ -91,7 +82,17 @@ namespace Redwood
             binaryOpParsers.Add(
                 new BinaryOpGroupParser(new BinaryOpSpec("&", BinaryOperator.BitwiseAnd, false))
             );
-            
+
+            // TODO: This allows && and || to be parsed, but the precedence is now wrong
+            // Logical Or
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("||", BinaryOperator.LogicalOr, false))
+            );
+            // Logical And
+            binaryOpParsers.Add(
+                new BinaryOpGroupParser(new BinaryOpSpec("&&", BinaryOperator.LogicalAnd, false))
+            );
+
             // Equal/NotEqual
             binaryOpParsers.Add(
                 new BinaryOpGroupParser(
