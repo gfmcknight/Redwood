@@ -24,12 +24,22 @@ namespace Redwood.Ast
                 typeof(InternalLambda),
                 ReturnType?.GetIndicatedType() ?? RedwoodType.Void,
                 Parameters.Select(param => param.Type.GetIndicatedType()).ToArray());
+            
             base.Bind(binder);
+            // No need to bind if we're a stub; we just need to communicate
+            // our type to the outside world. Since no actual compilation will
+            // go on, we don't need to be compiled.
+            if (Body == null)
+            {
+                return;
+            }
+
             binder.EnterFullScope();
             foreach (ParameterDefinition param in Parameters)
             {
                 param.Bind(binder);
             }
+            
             Body.Bind(binder);
             ClosureSize = binder.GetClosureSize();
             StackSize = binder.LeaveFullScope();
@@ -37,12 +47,12 @@ namespace Redwood.Ast
 
         internal override IEnumerable<Instruction> Compile()
         {
+            // Precondition for Compile() being called: Body != null
             return new Instruction[]
             {
                 new BuildInternalLambdaInstruction(CompileInner()),
                 Compiler.CompileVariableAssign(DeclaredVariable)
             };
-
         }
 
         internal override IEnumerable<NameExpression> Walk()
@@ -59,6 +69,14 @@ namespace Redwood.Ast
             {
                 freeVars.AddRange(param.Walk());
                 parameterVars.Add(param.DeclaredVariable);
+            }
+
+            // If we have a method stub, we don't care about walking
+            // the body because we only need types, and those types
+            // are guaranteed to be closured
+            if (Body == null)
+            {
+                return freeVars;
             }
 
             freeVars.AddRange(Body.Walk());

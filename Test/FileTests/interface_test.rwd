@@ -1,0 +1,56 @@
+﻿import Test.RAssert;
+
+interface TestInterface
+{
+    function<int> funcA();
+
+    function<int> funcB();
+    function<int> funcB(string s);
+    function<int> funcB(int i);
+}
+
+class TestClass : TestInterface
+{
+    constructor() {}
+
+    function<int> funcA() { return 3; }
+
+    function<int> funcB() { return 4; }
+    function<int> funcB(string s) { return 5; }
+    function<int> funcB(int i) { return 6; }
+}
+
+class TestClass2 : TestInterface
+{
+    constructor() {}
+    
+    function<int> funcB() { return 4; }
+    function<int> funcB(string s) { return 5; }
+
+    function<int> funcA() { return 3; }
+
+    function<int> funcB(int i) { return 6; }
+}
+
+function<int> testMain(RAssert assert)
+{
+    let TestClass tc = TestClass();
+    assert.Equal(3, tc.funcA());
+    assert.Equal(4, tc.funcB());
+    assert.Equal(5, tc.funcB(""));
+    assert.Equal(6, tc.funcB(3));
+
+    let TestInterface ti = tc;
+    assert.Equal(3, ti.funcA());
+    assert.Equal(4, ti.funcB());
+    assert.Equal(5, ti.funcB(""));
+    assert.Equal(6, ti.funcB(3));
+
+    ti = TestClass2();
+    assert.Equal(3, ti.funcA());
+    assert.Equal(4, ti.funcB());
+    assert.Equal(5, ti.funcB(""));
+    assert.Equal(6, ti.funcB(3));
+
+    return 0;
+}

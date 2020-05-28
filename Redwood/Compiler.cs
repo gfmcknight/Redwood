@@ -190,7 +190,6 @@ namespace Redwood
         internal static List<OverloadGroup> GenerateOverloads(
             List<FunctionDefinition> functions)
         {
-
             Dictionary<string, List<FunctionDefinition>> functionsByName =
                 new Dictionary<string, List<FunctionDefinition>>();
 
@@ -208,10 +207,10 @@ namespace Redwood
                 }
             }
 
+            // TODO: Define a strict ordering for functions in an overload group
             List<OverloadGroup> overloads = new List<OverloadGroup>();
             foreach (List<FunctionDefinition> overload in functionsByName.Values)
             {
-                // TODO: make the LambdaGroup a 
                 Variable variable = overload.Count == 1 ?
                     overload[0].DeclaredVariable :
                     new Variable
@@ -289,8 +288,17 @@ namespace Redwood
             {
                 if (from.CSharpType == null)
                 {
-                    // TODO: This needs to turn into a direct member lookup
-                    throw new NotImplementedException();
+                    if (!from.HasImplicitConversion(to))
+                    {
+                        throw new NotImplementedException();
+                    }
+
+                    int slot = from.implicitConversionMap[to];
+                    return new Instruction[]
+                    {
+                        new LookupDirectMemberInstruction(slot),
+                        new InternalCallInstruction(new int[0])
+                    };
                 }
 
                 // This call won't work on a RedwoodType in the compile phase

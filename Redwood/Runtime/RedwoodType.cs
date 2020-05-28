@@ -37,8 +37,12 @@ namespace Redwood.Runtime
         public Type CSharpType { get; private set; }
         // TODO: Make this immutable?
         public RedwoodType[] GenericArguments { get; private set; }
+        public bool IsInterface { get; private set; }
+        public RedwoodType[] Interfaces { get; internal set; }
+
         public RedwoodType NonGenericType { get; private set; }
         public Lambda Constructor { get; internal set; }
+
 
         static RedwoodType()
         {
@@ -361,7 +365,14 @@ namespace Redwood.Runtime
         {
             RedwoodType type = new RedwoodType();
             type.Name = @class.Name;
-            // TODO: Number of slots?
+            return type;
+        }
+
+        internal static RedwoodType Make(InterfaceDefinition @interface)
+        {
+            RedwoodType type = new RedwoodType();
+            type.Name = @interface.Name;
+            type.IsInterface = true;
             return type;
         }
     }

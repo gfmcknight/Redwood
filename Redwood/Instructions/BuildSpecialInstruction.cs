@@ -106,4 +106,26 @@ namespace Redwood.Instructions
             return 1;
         }
     }
+
+    internal class BuildLambdaGroupFromLambdasInstruction : Instruction
+    {
+        private int[] lambdaLocations;
+
+        public BuildLambdaGroupFromLambdasInstruction(int[] lambdaLocations)
+        {
+            this.lambdaLocations = lambdaLocations;
+        }
+
+        public int Execute(Frame frame)
+        {
+            Lambda[] lambdas = new Lambda[lambdaLocations.Length];
+            for (int i = 0; i < lambdaLocations.Length; i++)
+            {
+                lambdas[i] = frame.stack[lambdaLocations[i]] as Lambda;
+            }
+            frame.result = new LambdaGroup(lambdas);
+            return 1;
+        }
+    }
+
 }

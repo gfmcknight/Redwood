@@ -253,6 +253,13 @@ namespace Redwood
                     continue;
                 }
 
+                definition = await ParseInterface();
+                if (definition != null)
+                {
+                    definitions.Add(definition);
+                    continue;
+                }
+
                 definition = await ParseDefinition();
                 if (definition == null)
                 {
@@ -341,6 +348,19 @@ namespace Redwood
                 }
             }
 
+            List<TypeSyntax> interfaces = new List<TypeSyntax>();
+            if (await MaybeToken(":", false))
+            {
+                while (!eof)
+                {
+                    interfaces.Add(await ParseType());
+                    if (!await MaybeToken(",", false))
+                    {
+                        break;
+                    }
+                }
+            }
+
             if (!await MaybeToken("{", false))
             {
                 throw new NotImplementedException();
@@ -400,11 +420,54 @@ namespace Redwood
             return new ClassDefinition
             {
                 Name = name,
+                Interfaces = interfaces.ToArray(),
                 Constructors = constructors.ToArray(),
                 Methods = methods.ToArray(),
                 StaticMethods = staticMethods.ToArray(),
                 ParameterFields = defaultParams,
                 InstanceFields =  fields.ToArray()
+            };
+        }
+
+        internal async Task<InterfaceDefinition> ParseInterface()
+        {
+            if (!await MaybeToken("interface", true))
+            {
+                return null;
+            }
+
+            if (!await MaybeName())
+            {
+                throw new NotImplementedException();
+            }
+            string name = LastName;
+
+            if (!await MaybeToken("{", false))
+            {
+                throw new NotImplementedException();
+            }
+
+            List<FunctionDefinition> methods = new List<FunctionDefinition>();
+            while (!eof)
+            {
+                if (await MaybeToken("}", false))
+                {
+                    break;
+                }
+
+                FunctionDefinition method = await ParseFunctionStub();
+                if (!await MaybeToken(";", false))
+                {
+                    throw new NotImplementedException();
+                }
+
+                methods.Add(method);
+            }
+
+            return new InterfaceDefinition
+            {
+                Name = name,
+                Methods = methods.ToArray()
             };
         }
 
@@ -431,9 +494,8 @@ namespace Redwood
             return null;
         }
 
-        public async Task<FunctionDefinition> ParseFunctionDefinition()
+        private async Task<FunctionDefinition> ParseFunctionStub()
         {
-            bool isStatic = await MaybeToken("static", true);
             if (!await MaybeToken("function", true))
             {
                 return null;
@@ -481,20 +543,34 @@ namespace Redwood
                 }
             }
 
+            return new FunctionDefinition
+            {
+                Static = false,
+                Name = functionName,
+                Parameters = parameters,
+                Body = null,
+                ReturnType = returnType
+            };
+        }
+
+        public async Task<FunctionDefinition> ParseFunctionDefinition()
+        {
+            bool isStatic = await MaybeToken("static", true);
+
+            FunctionDefinition definition = await ParseFunctionStub();
+            if (definition == null)
+            {
+                return null;
+            }
+
             BlockStatement functionCode = await ParseBlock();
             if (functionCode == null)
             {
                 throw new NotImplementedException();
             }
-
-            return new FunctionDefinition
-            {
-                Static = isStatic,
-                Name = functionName,
-                Parameters = parameters,
-                Body = functionCode,
-                ReturnType = returnType
-            };
+            definition.Static = isStatic;
+            definition.Body = functionCode;
+            return definition;
         }
 
         public async Task<FunctionDefinition> ParseConstructorDefinition()

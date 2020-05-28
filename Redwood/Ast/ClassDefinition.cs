@@ -12,6 +12,7 @@ namespace Redwood.Ast
         // Parameter fields are for default constructors -- where fields
         // and the constructor can be defined all at once.
         public ParameterDefinition[] ParameterFields { get; set; }
+        public TypeSyntax[] Interfaces { get; set; }
         public LetDefinition[] InstanceFields { get; set; }
         public FunctionDefinition[] Constructors { get; set; }
         public FunctionDefinition[] Methods { get; set; }
@@ -19,6 +20,7 @@ namespace Redwood.Ast
         internal RedwoodType Type { get; set; }
         internal Variable This { get; set; }
         internal List<Variable> MemberVariables { get; set; }
+        internal List<Variable> InterfaceImplicitConversionVars { get; set; }
         internal List<Variable> TempArgumentVariables { get; set; }
         internal List<Instruction> ConstructorBase { get; set; }
         internal int ConstructorStackSize { get; set; }
@@ -92,6 +94,11 @@ namespace Redwood.Ast
                 method.Bind(binder);
             }
 
+            foreach (Variable implicitConversionVariable in InterfaceImplicitConversionVars)
+            {
+                binder.BindVariable(implicitConversionVariable);
+            }
+
             foreach (OverloadGroup overload in Overloads)
             {
                 overload.DoBind(binder);
@@ -118,6 +125,14 @@ namespace Redwood.Ast
 
             Type.slotMap = new Dictionary<string, int>();
             Type.slotTypes = new RedwoodType[Type.numSlots];
+
+            // Ensure that even though the overloads are hidden, they
+            // are still represented in the slot map
+            foreach (FunctionDefinition method in Methods)
+            {
+                Type.slotTypes[method.DeclaredVariable.Location] = method.DeclaredVariable.KnownType;
+            }
+
             for (int i = 0; i < MemberVariables.Count; i++)
             {
                 Variable var = MemberVariables[i];
@@ -126,7 +141,52 @@ namespace Redwood.Ast
                 Type.slotMap[var.Name] = slot;
             }
 
+            Type.Interfaces = Interfaces
+                .Select(typeSyntax => typeSyntax.GetIndicatedType())
+                .ToArray();
+            Type.implicitConversionMap = new Dictionary<RedwoodType, int>();
+            for (int i = 0; i < Interfaces.Length; i++)
+            {
+                RedwoodType interfaceType = Interfaces[i].GetIndicatedType();
+                Type.implicitConversionMap[interfaceType] = InterfaceImplicitConversionVars[i].Location;
+            }
+
             ConstructorStackSize = binder.LeaveFullScope();
+        }
+
+        private InternalLambdaDescription CompileInterfaceConversion(RedwoodType type)
+        {
+            int closureId = This.ClosureID;
+            int[] slots = RuntimeUtil.GetSlotMapsToInterface(Type, type);
+            List<Instruction> instructions = new List<Instruction>();
+            for (int i = 0; i < slots.Length; i++)
+            {
+                // Get the member on our class
+                instructions.Add(new LookupClosureInstruction(closureId, slots[i]));
+                // Assign it as an argument for the closure
+                instructions.Add(new AssignLocalInstruction(i));
+            }
+
+            instructions.Add(new LoadConstantInstruction(type));
+            instructions.Add(new LookupExternalMemberLambdaInstruction("Constructor", type));
+            // We already arranged all of the arguments in order
+            instructions.Add(
+                new InternalCallInstruction(
+                    Enumerable
+                        .Range(0, slots.Length)
+                        .ToArray()
+                )
+            );
+            instructions.Add(new ReturnInstruction());
+
+            return new InternalLambdaDescription
+            {
+                argTypes = new RedwoodType[0],
+                closureSize = 0,
+                stackSize = slots.Length,
+                returnType = type,
+                instructions = instructions.ToArray()
+            };
         }
 
         internal List<Instruction> CompileConstructor(FunctionDefinition constructor)
@@ -147,6 +207,18 @@ namespace Redwood.Ast
                 foreach (FunctionDefinition method in Methods)
                 {
                     ConstructorBase.AddRange(method.Compile());
+                }
+
+                for (int i = 0; i < Interfaces.Length; i++)
+                {
+                    ConstructorBase.Add(
+                        new BuildInternalLambdaInstruction(
+                            CompileInterfaceConversion(Interfaces[i].GetIndicatedType())
+                        )
+                    );
+                    ConstructorBase.Add(
+                        Compiler.CompileVariableAssign(InterfaceImplicitConversionVars[i])
+                    );
                 }
 
                 foreach (OverloadGroup method in Overloads)
@@ -244,6 +316,7 @@ namespace Redwood.Ast
             DeclaredVariable.ConstantValue = Type;
             List<NameExpression> freeVars = new List<NameExpression>();
             List<Variable> declaredVars = new List<Variable>();
+            InterfaceImplicitConversionVars = new List<Variable>();
             int maxConstructorArgs = 0;
 
             This = new Variable
@@ -261,6 +334,22 @@ namespace Redwood.Ast
                     freeVars.AddRange(param.Walk());
                     declaredVars.Add(param.DeclaredVariable);
                 }
+            }
+
+            foreach (TypeSyntax interfaceType in Interfaces)
+            {
+                freeVars.AddRange(interfaceType.Walk());
+                // TODO: What if we inherit an implicit, or if we
+                // a function that is meant to represent this, or
+                // an implicit declared function?
+                InterfaceImplicitConversionVars.Add(
+                    new Variable
+                    {
+                        Name = RuntimeUtil.GetNameOfConversionToType(interfaceType.TypeName.Name),
+                        Closured = true,
+                        DefinedConstant = true
+                    }
+                );
             }
 
             foreach (LetDefinition field in InstanceFields)
@@ -294,6 +383,7 @@ namespace Redwood.Ast
             Overloads = Compiler.GenerateOverloads(Methods.ToList());
             declaredVars.AddRange(Overloads.Select(o => o.variable));
 
+            declaredVars.AddRange(InterfaceImplicitConversionVars);
             MemberVariables = declaredVars;
             // Make sure that all of our variables end up in the closure that
             // makes up our RedwoodObject

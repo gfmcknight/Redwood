@@ -33,6 +33,14 @@ namespace Redwood.Ast
                 instructions.AddRange(Initializer.Compile());
             }
 
+            if (Type.GetIndicatedType() != null)
+            {
+                instructions.AddRange(
+                    Compiler.CompileImplicitConversion(Initializer?.GetKnownType(), Type.GetIndicatedType())
+                );
+            }
+            
+
             instructions.Add(Compiler.CompileVariableAssign(DeclaredVariable));
             return instructions;
         }

@@ -1,6 +1,7 @@
 ﻿using Redwood.Ast;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -55,6 +56,16 @@ namespace Redwood.Runtime
                     // by flow
                     return null;
             }
+        }
+
+        internal static string GetNameOfConversionToType(string typename)
+        {
+            if (RedwoodType.TryGetSpecialMappedType(typename, out RedwoodType type))
+            {
+                return "as_" + type.Name;
+            }
+
+            return "as_" + typename;
         }
 
         internal static RedwoodType[] GetTypesFromMethodInfo(MethodInfo methodInfo)
@@ -321,6 +332,61 @@ namespace Redwood.Runtime
             {
                 return RedwoodType.GetForCSharpType(o.GetType());
             }
+        }
+
+        internal static int[] GetSlotMapsToInterface(RedwoodType from, RedwoodType to)
+        {
+            // We have to map to an interface, otherwise we're just
+            // shoving things where they don't belong
+            if (!to.IsInterface)
+            {
+                throw new NotImplementedException();
+            }
+
+            // We want to fill up every slot up to the overloads, which are
+            // packed at the end of the class
+            // TODO: This is a bad way of counting overloads. It checks whether
+            // a given overload index is "self referential", meaning that it's the
+            // only option, in which case it would not constitute a "LambdaGroup"
+            int numOverloads = to.overloadsMap
+                .Where(kv => kv.Key != kv.Value.Item2[0])
+                .Count();
+            int[] slotsToUse = new int[to.numSlots - numOverloads];
+
+            foreach (KeyValuePair<string, int> member in to.slotMap)
+            {
+                string name = member.Key;
+                int slot = member.Value;
+
+                RedwoodType slotType = to.slotTypes[slot];
+                if (slotType.CSharpType == typeof(LambdaGroup))
+                {
+                    Tuple<RedwoodType[][], int[]> overloadSlots = to.overloadsMap[slot];
+                    for (int i = 0; i < overloadSlots.Item2.Length; i++)
+                    {
+                        int overloadMemberSlot = overloadSlots.Item2[i];
+                        RedwoodType[] overloadArgTypes = overloadSlots.Item1[i];
+
+                        slotsToUse[overloadMemberSlot] = from.GetSlotNumberForOverload(name, overloadArgTypes);
+                    }
+                }
+                else if (typeof(Lambda).IsAssignableFrom(slotType.CSharpType))
+                {
+                    slotsToUse[slot] = from.GetSlotNumberForOverload(
+                        name,
+                        slotType.GenericArguments
+                            .SkipLast(1)
+                            .ToArray()
+                    );
+                }
+                else
+                {
+                    // TODO: This case should only be hit for the this keyword
+                    slotsToUse[slot] = from.slotMap[name];
+                }
+            }
+
+            return slotsToUse;
         }
     }
 }
