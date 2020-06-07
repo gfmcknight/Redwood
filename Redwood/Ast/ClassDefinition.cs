@@ -167,23 +167,55 @@ namespace Redwood.Ast
                 instructions.Add(new AssignLocalInstruction(i));
             }
 
+            if (type.CSharpType != null)
+            {
+                instructions.Add(
+                    new BuildArrayInstruction(
+                        Enumerable
+                            .Range(0, slots.Length)
+                            .ToArray(),
+                        typeof(object)
+                    )
+                );
+                // Save it right past the arguments for the creation of
+                // the array
+                instructions.Add(new AssignLocalInstruction(slots.Length));
+            }
+
             instructions.Add(new LoadConstantInstruction(type));
-            instructions.Add(new LookupExternalMemberLambdaInstruction("Constructor", type));
-            // We already arranged all of the arguments in order
-            instructions.Add(
-                new InternalCallInstruction(
-                    Enumerable
-                        .Range(0, slots.Length)
-                        .ToArray()
-                )
-            );
+            instructions.Add(new LookupExternalMemberLambdaInstruction(
+                "Constructor",
+                RedwoodType.GetForCSharpType(typeof(RedwoodType))
+            ));
+
+            if (type.CSharpType == null)
+            {
+                // We already arranged all of the arguments in order
+                instructions.Add(
+                    new InternalCallInstruction(
+                        Enumerable
+                            .Range(0, slots.Length)
+                            .ToArray()
+                    )
+                );
+            }
+            else
+            {
+                instructions.Add(
+                    new ExternalCallInstruction(
+                        new int[] { slots.Length }
+                    )
+                );
+            }
+
+            
             instructions.Add(new ReturnInstruction());
 
             return new InternalLambdaDescription
             {
                 argTypes = new RedwoodType[0],
                 closureSize = 0,
-                stackSize = slots.Length,
+                stackSize = slots.Length + 1,
                 returnType = type,
                 instructions = instructions.ToArray()
             };

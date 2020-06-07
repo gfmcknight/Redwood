@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Redwood.Runtime;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using Xunit;
 
 namespace Test
 {
@@ -78,6 +80,25 @@ namespace Test
         public LLNode(int value)
         {
             Value = value;
+        }
+    }
+
+    public interface TestInteropInterface
+    {
+        int FuncA();
+        int FuncB();
+        int FuncB(int i);
+        int FuncB(string s);
+    }
+
+    public class TestInterfaceTaker
+    {
+        public static void AssertStuffOnTestInterface(TestInteropInterface iface)
+        {
+            Assert.Equal(3, iface.FuncA());
+            Assert.Equal(4, iface.FuncB());
+            Assert.Equal(5, iface.FuncB("test"));
+            Assert.Equal(6, iface.FuncB(4));
         }
     }
 }

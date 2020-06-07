@@ -359,7 +359,7 @@ namespace Redwood.Runtime
                 int slot = member.Value;
 
                 RedwoodType slotType = to.slotTypes[slot];
-                if (slotType.CSharpType == typeof(LambdaGroup))
+                if (slotType != null && slotType.CSharpType == typeof(LambdaGroup))
                 {
                     Tuple<RedwoodType[][], int[]> overloadSlots = to.overloadsMap[slot];
                     for (int i = 0; i < overloadSlots.Item2.Length; i++)
@@ -370,7 +370,7 @@ namespace Redwood.Runtime
                         slotsToUse[overloadMemberSlot] = from.GetSlotNumberForOverload(name, overloadArgTypes);
                     }
                 }
-                else if (typeof(Lambda).IsAssignableFrom(slotType.CSharpType))
+                else if (slotType != null && typeof(Lambda).IsAssignableFrom(slotType.CSharpType))
                 {
                     slotsToUse[slot] = from.GetSlotNumberForOverload(
                         name,

@@ -32,6 +32,9 @@ namespace Redwood.Runtime
         internal RedwoodType[] staticSlotTypes;
         internal Lambda[] staticLambdas;
 
+        // For C# interfaces
+        internal Type proxyType;
+
         public string Name { get; private set; }
         public RedwoodType BaseType { get; private set; }
         public Type CSharpType { get; private set; }
@@ -95,7 +98,9 @@ namespace Redwood.Runtime
             if (!typeAdaptors.ContainsKey(type))
             {
                 typeAdaptors[type] = new RedwoodType(type);
+                typeAdaptors[type].InitInterfaceIfNecessary();
             }
+
             return typeAdaptors[type];
         }
 
@@ -324,6 +329,87 @@ namespace Redwood.Runtime
             redwoodType.CSharpType = type;
             redwoodType.GenericArguments = signature.ToArray();
             return redwoodType;
+        }
+
+        /// <summary>
+        /// For the most part, the MemberResolver is able to resolve the
+        /// methods, fields, and properties on C# types, but populating the
+        /// slots for an interface will allow us to map to a specific order
+        /// needed by the interface stitching done by the Emitter.
+        /// </summary>
+        private void InitInterfaceIfNecessary()
+        {
+            if (CSharpType == null || !CSharpType.IsInterface)
+            {
+                return;
+            }
+
+            IsInterface = true;
+
+            var overloads = new Dictionary<string, Tuple<List<RedwoodType[]>, List<int>>>();
+            int slot = 0;
+            List<RedwoodType> slotTypes = new List<RedwoodType>();
+            slotMap = new Dictionary<string, int>();
+            overloadsMap = new Dictionary<int, Tuple<RedwoodType[][], int[]>>();
+
+            foreach (MethodInfo method in CSharpType.GetMethods())
+            {
+                RedwoodType[] parameterTypes = method
+                    .GetParameters()
+                    .Select(param => RedwoodType.GetForCSharpType(param.ParameterType))
+                    .ToArray();
+                if (!overloads.ContainsKey(method.Name))
+                {
+                    overloads[method.Name] = new Tuple<List<RedwoodType[]>, List<int>>(
+                        new List<RedwoodType[]>(),
+                        new List<int>()
+                    );
+                }
+
+                slotTypes.Add(RedwoodType.GetForLambdaArgsTypes(
+                    typeof(ExternalLambda),
+                    RedwoodType.GetForCSharpType(method.ReturnType),
+                    parameterTypes
+                ));
+
+                overloads[method.Name].Item1.Add(parameterTypes);
+                overloads[method.Name].Item2.Add(slot);
+                slot++;
+            }
+            
+            // For interfaces, the methods are all at the beginnings, overloads
+            // all at the end
+            foreach (string overloadName in overloads.Keys)
+            {
+                // TODO: Do we care about the overload type here?
+                int[] overloadSlots = overloads[overloadName].Item2.ToArray();
+                slotTypes.Add(RedwoodType
+                    .GetForCSharpType(typeof(LambdaGroup))
+                    .GetGenericSpecialization(
+                        overloadSlots
+                            .Select(slot => slotTypes[slot])
+                            .ToArray()
+                    )
+                ); ;
+
+
+                slotMap[overloadName] = slot;
+                overloadsMap[slot] = new Tuple<RedwoodType[][], int[]>(
+                    overloads[overloadName].Item1.ToArray(),
+                    overloadSlots
+                );
+                slot++;
+            }
+
+            numSlots = slot;
+            this.slotTypes = slotTypes.ToArray();
+            // Technically a proxy type can occur from any redwood type to
+            // any C# interface, but we emit for the interface we created
+            // and then reuse it so that we can keep a cceiling on the
+            // number of these classes that we create
+            proxyType = Emitter.EmitInterfaceProxyType(this, CSharpType);
+            ConstructorInfo constructor = proxyType.GetConstructor(new Type[] { typeof(object[]) });
+            Constructor = new ExternalLambda(this, constructor);
         }
 
         private RedwoodType()

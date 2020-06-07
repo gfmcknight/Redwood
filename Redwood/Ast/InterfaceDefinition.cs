@@ -41,7 +41,7 @@ namespace Redwood.Ast
             This = new Variable
             {
                 Name = "this",
-                KnownType = Type,
+                KnownType = null, // Dynamic since the reference isn't necessarily our own type
             };
             declaredVars.Add(This);
             varsSupplied.Add(This);
@@ -189,7 +189,9 @@ namespace Redwood.Ast
 
             InternalLambdaDescription constructorLambda = new InternalLambdaDescription
             {
-                argTypes = new RedwoodType[0], // TODO: Allow interfaces to be defined from Redwood
+                argTypes = SuppliedVariables
+                    .Select(argVar => null as RedwoodType)
+                    .ToArray(),
                 returnType = Type,
                 closureSize = Type.numSlots,
                 stackSize = ArgumentVariables.Count,

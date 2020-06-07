@@ -1,4 +1,6 @@
 ﻿import Test.RAssert;
+import Test.TestInteropInterface;
+import Test.TestInterfaceTaker;
 
 interface TestInterface
 {
@@ -32,6 +34,17 @@ class TestClass2 : TestInterface
     function<int> funcB(int i) { return 6; }
 }
 
+class TestClass3 : TestInteropInterface
+{
+    constructor() {}
+
+    function<int> FuncA() { return 3; }
+
+    function<int> FuncB() { return 4; }
+    function<int> FuncB(string s) { return 5; }
+    function<int> FuncB(int i) { return 6; }
+}
+
 function<int> testMain(RAssert assert)
 {
     let TestClass tc = TestClass();
@@ -51,6 +64,14 @@ function<int> testMain(RAssert assert)
     assert.Equal(4, ti.funcB());
     assert.Equal(5, ti.funcB(""));
     assert.Equal(6, ti.funcB(3));
+
+    let TestInteropInterface tii = TestClass3();
+    assert.Equal(3, tii.FuncA());
+    assert.Equal(4, tii.FuncB());
+    assert.Equal(5, tii.FuncB(""));
+    assert.Equal(6, tii.FuncB(3));
+    
+    TestInterfaceTaker.AssertStuffOnTestInterface(tii);
 
     return 0;
 }

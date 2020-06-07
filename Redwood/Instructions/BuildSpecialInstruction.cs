@@ -128,4 +128,26 @@ namespace Redwood.Instructions
         }
     }
 
+    internal class BuildArrayInstruction : Instruction
+    {
+        private int[] locations;
+        Type type;
+
+        public BuildArrayInstruction(int[] location, Type type)
+        {
+            this.locations = location;
+            this.type = type;
+        }
+
+        public int Execute(Frame frame)
+        {
+            Array array = Array.CreateInstance(type, locations.Length);
+            for (int i = 0; i < locations.Length; i++)
+            {
+                array.SetValue(frame.stack[i], i);
+            }
+            frame.result = array;
+            return 1;
+        }
+    }
 }
