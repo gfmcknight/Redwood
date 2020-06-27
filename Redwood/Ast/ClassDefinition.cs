@@ -126,11 +126,16 @@ namespace Redwood.Ast
             Type.slotMap = new Dictionary<string, int>();
             Type.slotTypes = new RedwoodType[Type.numSlots];
 
+            Type.implicitConversionMap = new Dictionary<RedwoodType, int>();
             // Ensure that even though the overloads are hidden, they
             // are still represented in the slot map
             foreach (FunctionDefinition method in Methods)
             {
                 Type.slotTypes[method.DeclaredVariable.Location] = method.DeclaredVariable.KnownType;
+                if (method.Name == "op_Implicit")
+                {
+                    Type.implicitConversionMap[method.ReturnType.GetIndicatedType()] = method.DeclaredVariable.Location;
+                }
             }
 
             for (int i = 0; i < MemberVariables.Count; i++)
@@ -144,11 +149,15 @@ namespace Redwood.Ast
             Type.Interfaces = Interfaces
                 .Select(typeSyntax => typeSyntax.GetIndicatedType())
                 .ToArray();
-            Type.implicitConversionMap = new Dictionary<RedwoodType, int>();
             for (int i = 0; i < Interfaces.Length; i++)
             {
                 RedwoodType interfaceType = Interfaces[i].GetIndicatedType();
-                Type.implicitConversionMap[interfaceType] = InterfaceImplicitConversionVars[i].Location;
+                // If the user wrote a custom op_Implicit to an interface, respect
+                // that instead of this conversion
+                if (!Type.implicitConversionMap.ContainsKey(interfaceType))
+                {
+                    Type.implicitConversionMap[interfaceType] = InterfaceImplicitConversionVars[i].Location;
+                }
             }
 
             ConstructorStackSize = binder.LeaveFullScope();

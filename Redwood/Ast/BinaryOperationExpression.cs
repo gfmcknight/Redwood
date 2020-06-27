@@ -28,6 +28,7 @@ namespace Redwood.Ast
         LogicalAnd,
         LogicalOr,
         Coalesce,
+        As,
         Assign // TODO: Other assign operators?
     }
     public class BinaryOperationExpression : Expression
@@ -56,6 +57,8 @@ namespace Redwood.Ast
                     case BinaryOperator.LogicalAnd:
                     case BinaryOperator.LogicalOr:
                         return CompileLogicalExpression();
+                    case BinaryOperator.As:
+                        return CompileAs();
                     default:
                         break;
                 }
@@ -214,6 +217,28 @@ namespace Redwood.Ast
             return instructions;
         }
 
+        private IEnumerable<Instruction> CompileAs()
+        {
+            // Make sure that the right resolved to a type
+            if (!Right.Constant)
+            {
+                throw new NotImplementedException();
+            }
+
+            RedwoodType rightValue = Right.EvaluateConstant() as RedwoodType;
+            if (rightValue == null)
+            {
+                throw new NotImplementedException();
+            }
+            
+            List<Instruction> instructions = new List<Instruction>();
+            instructions.AddRange(Left.Compile());
+            instructions.AddRange(
+                Compiler.CompileImplicitConversion(Left.GetKnownType(), rightValue)
+            );
+            return instructions;
+        }
+
         internal override IEnumerable<NameExpression> Walk()
         {
             ReflectedOperatorName = RuntimeUtil.NameForOperator(Operator);
@@ -239,6 +264,7 @@ namespace Redwood.Ast
                         break;
                     case BinaryOperator.LogicalAnd:
                     case BinaryOperator.LogicalOr:
+                    case BinaryOperator.As:
                         // No temporary variables needed
                         break;
                     default:
@@ -451,6 +477,17 @@ namespace Redwood.Ast
 
         public override RedwoodType GetKnownType()
         {
+            switch (Operator)
+            {
+                case BinaryOperator.LogicalAnd:
+                case BinaryOperator.LogicalOr:
+                    return RedwoodType.GetForCSharpType(typeof(bool));
+                case BinaryOperator.As:
+                    return Right.EvaluateConstant() as RedwoodType; // TODO!
+                default:
+                    break;
+            }
+
             if (LambdaType == null || LambdaType.CSharpType == typeof(LambdaGroup))
             {
                 return null;
@@ -476,6 +513,7 @@ namespace Redwood.Ast
             return op == BinaryOperator.LogicalAnd ||
                    op == BinaryOperator.LogicalOr ||
                    op == BinaryOperator.Coalesce  ||
+                   op == BinaryOperator.As ||
                    op == BinaryOperator.Assign;
         }
     }

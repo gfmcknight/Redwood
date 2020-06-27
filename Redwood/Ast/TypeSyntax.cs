@@ -27,20 +27,11 @@ namespace Redwood.Ast
 
         internal override IEnumerable<NameExpression> Walk()
         {
-            // TODO: Walk the GenericInnerTypes
-            if (RedwoodType.TryGetSpecialMappedType(TypeName.Name, out RedwoodType type))
-            {
-                return new NameExpression[0];
-            }
             return new NameExpression[] { TypeName };
         }
 
         internal RedwoodType GetIndicatedType()
         {
-            if (RedwoodType.TryGetSpecialMappedType(TypeName.Name, out RedwoodType type))
-            {
-                return type;
-            }
             RedwoodType knownType = 
                 TypeName.Constant ? 
                 TypeName.EvaluateConstant() as RedwoodType :

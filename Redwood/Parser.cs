@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -107,7 +108,8 @@ namespace Redwood
                     new BinaryOpSpec("<=", BinaryOperator.LessThanOrEquals, false),
                     new BinaryOpSpec(">=", BinaryOperator.GreaterThanOrEquals, false),
                     new BinaryOpSpec("<", BinaryOperator.LessThan, false),
-                    new BinaryOpSpec(">", BinaryOperator.GreaterThan, false)
+                    new BinaryOpSpec(">", BinaryOperator.GreaterThan, false),
+                    new BinaryOpSpec("as", BinaryOperator.As, true)
                 )
             );
 
@@ -390,6 +392,11 @@ namespace Redwood
                 if (function == null)
                 {
                     function = await ParseOperatorDefinition();
+                }
+
+                if (function == null)
+                {
+                    function = await ParseImplicitConversionDefinition();
                 }
                 
                 if (function != null)
@@ -690,6 +697,43 @@ namespace Redwood
                 Body = functionCode,
                 ReturnType = returnType,
                 Static = true
+            };
+        }
+
+        public async Task<FunctionDefinition> ParseImplicitConversionDefinition()
+        {
+            if (!await MaybeToken("implicit", true))
+            {
+                return null;
+            }
+
+            TypeSyntax returnType;
+            if (await MaybeToken("<", false))
+            {
+                returnType = await ParseType();
+                if (!await MaybeToken(">", false))
+                {
+                    throw new NotImplementedException();
+                }
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
+            BlockStatement functionCode = await ParseBlock();
+            if (functionCode == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            return new FunctionDefinition
+            {
+                Name = "op_Implicit",
+                Parameters = new ParameterDefinition[0],
+                Body = functionCode,
+                ReturnType = returnType,
+                Static = false
             };
         }
 

@@ -22,7 +22,7 @@ namespace Redwood.Ast
         {
             DeclaredVariable.KnownType = RedwoodType.GetForLambdaArgsTypes(
                 typeof(InternalLambda),
-                ReturnType?.GetIndicatedType() ?? RedwoodType.Void,
+                ReturnType == null ? RedwoodType.Void : ReturnType.GetIndicatedType(),
                 Parameters.Select(param => param.Type.GetIndicatedType()).ToArray());
             
             base.Bind(binder);
@@ -35,6 +35,10 @@ namespace Redwood.Ast
             }
 
             binder.EnterFullScope();
+            binder.PushReturnType(
+                ReturnType == null ? RedwoodType.Void : ReturnType.GetIndicatedType()
+            );
+
             foreach (ParameterDefinition param in Parameters)
             {
                 param.Bind(binder);
@@ -42,6 +46,7 @@ namespace Redwood.Ast
             
             Body.Bind(binder);
             ClosureSize = binder.GetClosureSize();
+            binder.PopReturnType();
             StackSize = binder.LeaveFullScope();
         }
 
@@ -111,7 +116,7 @@ namespace Redwood.Ast
             return new InternalLambdaDescription
             {
                 argTypes = paramTypes,
-                returnType = ReturnType?.GetIndicatedType() ?? RedwoodType.Void,
+                returnType = ReturnType == null ? RedwoodType.Void : ReturnType?.GetIndicatedType(),
                 instructions = bodyInstructions.ToArray(),
                 stackSize = StackSize,
                 closureSize = ClosureSize,

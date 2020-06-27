@@ -24,6 +24,7 @@ namespace Test
         [InlineData("linked_list_test.rwd")]
         [InlineData("operator_test.rwd")]
         [InlineData("interface_test.rwd")]
+        [InlineData("implicit_conversions_test.rwd")]
         public async Task RunTestFromFile(string filename)
         {
             Compiler.ExposeAssembly(Assembly.GetExecutingAssembly());

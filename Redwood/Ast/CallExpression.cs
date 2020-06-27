@@ -82,6 +82,10 @@ namespace Redwood.Ast
                 LambdaType = Callee
                     .GetKnownType()
                     .GetKnownTypeOfMember(FunctionName.Name);
+
+                // Make sure that calls to class functions also have the correct
+                // lambda type
+                ResolveLambdaGroupOverload(argumentTypes);
             }
             else if (Callee.GetKnownType().CSharpType == typeof(RedwoodType))
             {
@@ -169,9 +173,9 @@ namespace Redwood.Ast
         private void ResolveLambdaGroupOverload(RedwoodType[] argumentTypes)
         {
             if (LambdaType != null &&
-                                LambdaType.CSharpType == typeof(LambdaGroup) &&
-                                FullyResolved &&
-                                (LambdaType.GenericArguments?.Length ?? 0) > 0)
+                LambdaType.CSharpType == typeof(LambdaGroup) &&
+                FullyResolved &&
+                (LambdaType.GenericArguments?.Length ?? 0) > 0)
             {
                 RuntimeUtil.TrySelectOverload(
                     argumentTypes,
@@ -199,6 +203,25 @@ namespace Redwood.Ast
                 argumentTypes[i] = Arguments[i].GetKnownType();
                 argumentLocations[i] = ArgumentVariables[i].Location;
                 instructions.AddRange(Arguments[i].Compile());
+                
+                // Make sure that argument is coerced to the correct type before
+                // we send it off, but make sure not to do it when the callee
+                // is vague about the type, or we're still not fully resolved
+                // (in which case the TryCallInstruction should ideally handle conversion)
+                if (FullyResolved &&
+                    LambdaType?.GenericArguments != null &&
+                    LambdaType.GenericArguments.Length != 0 &&
+                    LambdaType.GenericArguments[i] != null)
+                {
+                    instructions.AddRange(
+                        Compiler.CompileImplicitConversion(
+                            argumentTypes[i],
+                            LambdaType.GenericArguments[i]
+                        )
+                    );
+                }
+                
+
                 instructions.Add(Compiler.CompileVariableAssign(ArgumentVariables[i]));
             }
 

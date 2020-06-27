@@ -211,7 +211,7 @@ function<int> testFunc()
         public async Task CanCallMethods()
         {
             string code = @"
-function<int> testFunc()
+function<?> testFunc()
 {
     import Test.SampleClass;
     function<int> callMethod(SampleClass sc, int x)

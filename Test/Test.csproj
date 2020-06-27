@@ -21,6 +21,9 @@
     <None Update="FileTests\class_def_test.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="FileTests\implicit_conversions_test.rwd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="FileTests\interface_test.rwd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

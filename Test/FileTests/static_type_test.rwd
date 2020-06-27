@@ -33,6 +33,13 @@ function<int> testMain(RAssert assert)
     assert.Equal(type(bool), statictype(1 <= 2));
     assert.Equal(type(bool), statictype(1 >= 2));
 
+    assert.Equal(type(bool), statictype(true && false));
+    assert.Equal(type(bool), statictype(true || false));
+
+    assert.Equal(type(bool), statictype(1 as bool));
+    assert.Equal(type(int), statictype(false as int));
+
+
     return 0;
 }
 

@@ -16,6 +16,7 @@ namespace Redwood
         private List<int> maxStack;
         private List<int> stackPosition;
         private List<int> closurePosition;
+        private List<RedwoodType> returnType;
 
         internal Binder()
         {
@@ -23,6 +24,7 @@ namespace Redwood
             maxStack = new List<int>();
             stackPosition = new List<int>();
             closurePosition = new List<int>();
+            returnType = new List<RedwoodType>();
         }
 
         internal void BindVariable(Variable variable)
@@ -92,6 +94,21 @@ namespace Redwood
             scopeDepth -= 1;
             maxStack[scopeDepth] = Math.Max(stackSize, maxStack[scopeDepth]);
         }
+
+        internal void PushReturnType(RedwoodType type)
+        {
+            returnType.Add(type);
+        }
+
+        internal void PopReturnType()
+        {
+            returnType.RemoveAt(returnType.Count - 1);
+        }
+
+        internal RedwoodType GetReturnType()
+        {
+            return returnType[returnType.Count - 1];
+        }
     }
 
     internal class OverloadGroup
@@ -160,7 +177,8 @@ namespace Redwood
             }
         }
 
-        internal static void MatchVariables(IList<NameExpression> freeVariables,
+        internal static List<NameExpression> MatchVariables(
+            List<NameExpression> freeVariables,
             IEnumerable<Variable> declaredVariables)
         {
             Dictionary<string, Variable> variablesByName =
@@ -185,6 +203,14 @@ namespace Redwood
                     freeVariables.RemoveAt(i);
                 }
             }
+            return freeVariables;
+        }
+
+        static List<NameExpression> MatchWith(
+            this List<NameExpression> self,
+            IEnumerable<Variable> declaredVariables)
+        {
+            return Compiler.MatchVariables(self, declaredVariables);
         }
 
         internal static List<OverloadGroup> GenerateOverloads(
@@ -314,7 +340,6 @@ namespace Redwood
                 // Cannot convert between the types
                 throw new NotImplementedException();
             }
-
         }
 
         private class ImportDetails
@@ -332,9 +357,26 @@ namespace Redwood
                 To = module;
                 int dotIndex = import.Name.LastIndexOf('.');
                 From = import.Name.Substring(0, dotIndex);
+                
                 Name = import.Name.Substring(dotIndex + 1);
                 NameExpression = import;
             }
+        }
+
+        private static List<Variable> GetSpecialMappedVariables()
+        {
+            List<Variable> builtinVariables = new List<Variable>();
+            foreach (string name in RedwoodType.specialMappedTypes.Keys)
+            {
+                builtinVariables.Add(new Variable
+                {
+                    Name = name,
+                    DefinedConstant = true,
+                    ConstantValue = RedwoodType.specialMappedTypes[name],
+                    KnownType = RedwoodType.GetForCSharpType(typeof(RedwoodType))
+                });
+            }
+            return builtinVariables;
         }
 
         public static async Task<GlobalContext> CompileModule(
@@ -345,8 +387,13 @@ namespace Redwood
             Dictionary<string, TopLevel> modules = new Dictionary<string, TopLevel>();
             modules[toplevel.ModuleName] = toplevel;
 
+            List<Variable> specialMappedTypeVariables = GetSpecialMappedVariables();
+
+            // If it has a dotwalk, it must be an import prefix
             List<ImportDetails> imports = toplevel
                 .Walk()
+                .ToList()
+                .MatchWith(specialMappedTypeVariables)
                 .Select((NameExpression ne) => new ImportDetails(toplevel.ModuleName, ne))
                 .ToList();
 
@@ -374,6 +421,8 @@ namespace Redwood
                     TopLevel tl = await new Parser(sr).ParseModule(imports[i].From);
                     imports.AddRange(
                         tl.Walk()
+                          .ToList()
+                          .MatchWith(specialMappedTypeVariables)
                           .Select((NameExpression ne) => new ImportDetails(imports[i].To, ne))
                     );
                     modules[imports[i].From] = tl;
@@ -456,8 +505,13 @@ namespace Redwood
 
         public static Lambda CompileFunction(FunctionDefinition function)
         {
-            // TODO!
-            IEnumerable<NameExpression> freeVars = function.Walk();
+            List<Variable> specialMappedTypes = GetSpecialMappedVariables();
+
+            IEnumerable<NameExpression> freeVars = function
+                .Walk()
+                .ToList()
+                .MatchWith(specialMappedTypes);
+
             if (freeVars.Count() > 0)
             {
                 // TODO

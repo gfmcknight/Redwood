@@ -1,0 +1,91 @@
+﻿import Test.RAssert;
+
+class TestClass()
+{
+    implicit<bool>
+    {
+        return false;
+    }
+
+    implicit<int>
+    {
+        return 3;
+    }
+
+    implicit<string>
+    {
+        return "test";
+    }
+}
+
+function testAsOperator(RAssert assert)
+{
+    assert.Equal(false, TestClass() as bool);
+    assert.Equal(3, TestClass() as int);
+    assert.Equal("test", TestClass() as string);
+}
+
+function testArgConversion(RAssert assert)
+{
+    function checkBool(bool val)
+    {
+        assert.Equal(false, val);
+    }
+
+    function checkInt(int val)
+    {
+        assert.Equal(3, val);
+    }
+
+    function checkString(string val)
+    {
+        assert.Equal("test", val);
+    }
+
+    checkBool(TestClass());
+    checkInt(TestClass());
+    checkString(TestClass());
+}
+
+function testAssignmentConversion(RAssert assert)
+{
+    let bool b = TestClass();
+    assert.Equal(false, b);
+
+    let int i = TestClass();
+    assert.Equal(3, i);
+
+    let string s = TestClass();
+    assert.Equal("test", s);
+}
+
+function testReturnConversion(RAssert assert)
+{
+    function<bool> getBool()
+    {
+        return TestClass();
+    }
+    assert.Equal(false, getBool());
+
+
+    function<int> getInt()
+    {
+        return TestClass();
+    }
+    assert.Equal(3, getInt());
+
+    function<string> getString() {
+        return TestClass();
+    }
+    assert.Equal("test", getString());
+}
+
+function<int> testMain(RAssert assert)
+{
+    testAsOperator(assert);
+    testArgConversion(assert);
+    testAssignmentConversion(assert);
+    testReturnConversion(assert);
+
+    return 0;
+}
