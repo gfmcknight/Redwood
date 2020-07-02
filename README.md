@@ -1,4 +1,6 @@
 # Redwood
+![](https://github.com/gfmcknight/Redwood/workflows/.NET%20Core/badge.svg)
+
 Redwood is a toy programming language interpreted in C#.
 
 Redwood is being made to experiment with the concept of persisted closures,
